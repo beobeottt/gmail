@@ -42,6 +42,16 @@ class _HomePageState extends State<HomePage> {
       ),
       // 2 button dưới đáy để chuyển các trang
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.blue,
+        selectedItemColor: Colors.green,
+        unselectedItemColor: Colors.black,
+
+        // onTap: (index)
+        // {
+        //   setState(() {
+        //     _selectedIndex = index;
+        //   });
+        // }
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
           BottomNavigationBarItem(
