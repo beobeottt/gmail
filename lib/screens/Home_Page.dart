@@ -15,11 +15,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
-  final List<Widget> _pages = [
-    const LoginPage(),
-    const RegisterPage(),
-    const HomePage(),
-  ];
+  // final List<Widget> _pages = [
+  //   const LoginPage(),
+  //   const RegisterPage(),
+  //   const HomePage(),
+  // ];
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -33,7 +33,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(title: Text('Leon'), centerTitle: true),
       body: PageView(
         controller: _pageController,
-        children: _pages,
+        // children: _pages,
         onPageChanged: (index) {
           setState(() {
             _selectedIndex = index;

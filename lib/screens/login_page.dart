@@ -139,13 +139,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-
-class DangKyPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Register')),
-      body: Center(child: Text('')),
-    );
-  }
-}

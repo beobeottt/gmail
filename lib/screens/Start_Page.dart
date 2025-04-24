@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:khoates/screens/Account_Page.dart';
+import 'package:khoates/screens/Setting_Page.dart' show SettingPage;
 import 'Home_Page.dart';
 import 'login_page.dart';
 import 'Register_Page.dart';
@@ -18,6 +20,8 @@ class _StartPageState extends State<StartPage> {
     const LoginPage(),
     const RegisterPage(),
     const HomePage(),
+    const AccountPage(),
+    const SettingPage(),
   ];
   void _onItemTapped(int index) {
     setState(() {
@@ -29,26 +33,52 @@ class _StartPageState extends State<StartPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[300],
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            children: [
-              Text(
-                'Demo',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Leon',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
-              ),
-            ],
-            
+      appBar: AppBar(title: Text('Leon'), centerTitle: true),
+      body: Column(
+        children: [
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              children: _pages,
+              onPageChanged: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+            ),
           ),
-
-          
-        ),
+          const SizedBox(height: 16),
+          const Text("Welcome to Leon App"),
+          const Text("Explore our features"),
+          const Text("Start your journey now!"),
+          ElevatedButton(
+            onPressed: () {
+              // Thêm hành động khi nhấn nút
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Button pressed!")));
+            },
+            child: const Text("Get Started"),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.blue,
+        selectedItemColor: Colors.green,
+        unselectedItemColor: Colors.black,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.app_registration),
+            label: 'Register',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
       ),
     );
   }
