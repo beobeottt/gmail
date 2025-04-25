@@ -115,22 +115,22 @@ class _LoginPageState extends State<LoginPage> {
 
                 SizedBox(height: 20),
 
-                // Register text
-                // GestureDetector(
-                //   onTap: () {
-                //     Navigator.push(
-                //       context,
-                //       MaterialPageRoute(builder: (context) => RegisterPage()),
-                //     );
-                //   },
-                //   child: Text(
-                //     'Not a member? Register',
-                //     style: TextStyle(
-                //       color: Colors.blue,
-                //       decoration: TextDecoration.underline,
-                //     ),
-                //   ),
-                // ),
+                //Register text
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => RegisterPage()),
+                    );
+                  },
+                  child: Text(
+                    'Not a member? Register',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

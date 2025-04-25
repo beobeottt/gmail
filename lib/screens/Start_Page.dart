@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:khoates/screens/Account_Page.dart';
 import 'package:khoates/screens/Setting_Page.dart' show SettingPage;
+import 'package:khoates/screens/login_page.dart';
 import 'Home_Page.dart';
-import 'login_page.dart';
 import 'Register_Page.dart';
-import 'package:khoates/firebase_options.dart';
 
 class StartPage extends StatefulWidget {
   const StartPage({Key? key}) : super(key: key);
@@ -15,60 +14,68 @@ class StartPage extends StatefulWidget {
 
 class _StartPageState extends State<StartPage> {
   int _selectedIndex = 0;
-  final PageController _pageController = PageController();
-  final List<Widget> _pages = [
-    const LoginPage(),
-    const RegisterPage(),
-    const HomePage(),
-    const AccountPage(),
-    const SettingPage(),
-  ];
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    _pageController.jumpToPage(index);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Leon'), centerTitle: true),
-      body: Column(
-        children: [
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              children: _pages,
-              onPageChanged: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
+      appBar: AppBar(title: const Text('Leon'), centerTitle: true),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "Welcome to Our App",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          const Text("Welcome to Leon App"),
-          const Text("Explore our features"),
-          const Text("Start your journey now!"),
-          ElevatedButton(
-            onPressed: () {
-              // Thêm hành động khi nhấn nút
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text("Button pressed!")));
-            },
-            child: const Text("Get Started"),
-          ),
-          const SizedBox(height: 16),
-        ],
+            const Text(
+              "Pham Bao Long",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const Text(
+              "Cong Minh",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                // Hành động khi nhấn nút
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Button pressed!")),
+                );
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              },
+              child: const Text("Get Started"),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.blue,
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.black,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
           BottomNavigationBarItem(
             icon: Icon(Icons.app_registration),
             label: 'Register',
