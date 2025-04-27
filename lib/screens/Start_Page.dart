@@ -80,6 +80,7 @@ class _StartPageState extends State<StartPage> {
             icon: Icon(Icons.app_registration),
             label: 'Register',
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),

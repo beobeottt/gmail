@@ -13,6 +13,7 @@ analyzer:
     unused_import: ignore
     unnecessary_library_name: ignore
     file_names: ignore
+    unused_element: ignore
 include: package:flutter_lints/flutter.yaml
 
 linter:
