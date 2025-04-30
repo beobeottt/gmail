@@ -21,6 +21,13 @@ class _StartPageState extends State<StartPage> {
     });
   }
 
+  final List<Widget> _pages = const [
+    RegisterPhonePage(),
+    HomePage(),
+    AccountPage(),
+    SettingPage(),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -71,23 +78,23 @@ class _StartPageState extends State<StartPage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.blue,
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.black,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.app_registration),
-            label: 'Register',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-      ),
+      // bottomNavigationBar: BottomNavigationBar(
+      //   backgroundColor: Colors.blue,
+      //   selectedItemColor: Colors.green,
+      //   unselectedItemColor: Colors.black,
+      //   items: const [
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.app_registration),
+      //       label: 'Register',
+      //     ),
+      //     BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
+      //     BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+      //     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
+      //     BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),
+      //   ],
+      //   currentIndex: _selectedIndex,
+      //   onTap: _onItemTapped,
+      // ),
     );
   }
 }

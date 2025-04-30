@@ -15,11 +15,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
-  // final List<Widget> _pages = [
-  //   const LoginPage(),
-  //   const RegisterPage(),
-  //   const HomePage(),
-  // ];
+  final List<Widget> _pages = [
+    const LoginPage(),
+    const RegisterPhonePage(),
+    const HomePage(),
+  ];
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -46,12 +46,11 @@ class _HomePageState extends State<HomePage> {
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.black,
 
-        // onTap: (index)
-        // {
+        // onTap: (index) {
         //   setState(() {
         //     _selectedIndex = index;
         //   });
-        // }
+        // },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
           BottomNavigationBarItem(

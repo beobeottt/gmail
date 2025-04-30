@@ -1,161 +1,65 @@
-// ignore_for_file: prefer_const_literals_to_create_immutables
+// register_phone_page.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'Verification_Code.dart';
 
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({Key? key}) : super(key: key);
+class RegisterPhonePage extends StatefulWidget {
+  const RegisterPhonePage({Key? key}) : super(key: key);
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  State<RegisterPhonePage> createState() => _RegisterPhonePageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
-  int _selectedIndex = 0;
+class _RegisterPhonePageState extends State<RegisterPhonePage> {
+  final _phoneController = TextEditingController();
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  Future<void> sendVerificationCode() async {
+    String phone = _phoneController.text.trim();
+
+    await FirebaseAuth.instance.verifyPhoneNumber(
+      phoneNumber: phone,
+      verificationCompleted: (PhoneAuthCredential credential) {},
+      verificationFailed: (FirebaseAuthException e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Xác minh thất bại: ${e.message}')),
+        );
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => VerifyOtpPage(
+                  phoneNumber: phone,
+                  verificationId: verificationId,
+                ),
+          ),
+        );
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {},
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[300],
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            width: 350,
-            padding: EdgeInsets.all(25),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.black),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black,
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
-                ),
-              ],
+      appBar: AppBar(title: Text("Register with Phone")),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            TextField(
+              controller: _phoneController,
+              decoration: InputDecoration(labelText: "Phone Number"),
+              keyboardType: TextInputType.phone,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Demo',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
-                ),
-                SizedBox(height: 10),
-                // Title Page
-                Text(
-                  'Register',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
-                ),
-                SizedBox(height: 10),
-
-                // Gmail
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      border: Border.all(color: Colors.black),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 20.0),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Gmail',
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // UserName
-                SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      border: Border.all(color: Colors.black),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 20.0),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Username',
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Password
-                SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      border: Border.all(color: Colors.black),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 20.0),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Password',
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: 20),
-                // Sign in button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      print('Okala pressed');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    child: Text('Register'),
-                  ),
-                ),
-              ],
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: sendVerificationCode,
+              child: Text("Send Verification"),
             ),
-          ),
+          ],
         ),
-      ),
-
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.blue,
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.black,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.app_registration),
-            label: 'Login',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
       ),
     );
   }
