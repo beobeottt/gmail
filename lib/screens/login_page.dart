@@ -3,8 +3,6 @@ import 'package:khoates/screens/Account_Page.dart';
 import 'package:khoates/screens/Home_Page.dart' show HomePage;
 import 'package:khoates/screens/Setting_Page.dart';
 import 'Register_Page.dart';
-import 'package:firebase_core/firebase_core.dart';
-import '../firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
@@ -22,7 +20,7 @@ class _LoginPageState extends State<LoginPage> {
     const AccountPage(),
     const SettingPage(),
   ];
-  final _usernameController = TextEditingController(); // Sửa tên controller
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   void _onItemTapped(int index) {
@@ -33,22 +31,21 @@ class _LoginPageState extends State<LoginPage> {
 
   Future signIn() async {
     try {
-      String username = _usernameController.text.trim();
+      String email = _emailController.text.trim();
       String password = _passwordController.text.trim();
 
-      if (username.isEmpty || password.isEmpty) {
+      if (email.isEmpty || password.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Vui lòng nhập đầy đủ thông tin.")),
+          SnackBar(content: Text("Vui lòng nhập đầy đủ email và mật khẩu.")),
         );
         return;
       }
 
-      // Đăng nhập bằng FirebaseAuth với username
-      UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-            email: "$username@example.com",
-            password: password,
-          ); // Tạo giả email
+      // Đăng nhập bằng email thật
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
       // Chuyển đến HomePage nếu đăng nhập thành công
       Navigator.pushReplacement(
@@ -115,8 +112,8 @@ class _LoginPageState extends State<LoginPage> {
             ),
             SizedBox(height: 20),
 
-            // Username (dùng cho tên người dùng)
-            buildTextField(_usernameController, 'Username'),
+            // Email field
+            buildTextField(_emailController, 'Email'),
 
             SizedBox(height: 20),
 
@@ -186,6 +183,8 @@ class _LoginPageState extends State<LoginPage> {
           child: TextField(
             controller: controller,
             obscureText: isPassword,
+            keyboardType:
+                isPassword ? TextInputType.text : TextInputType.emailAddress,
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: hintText,
