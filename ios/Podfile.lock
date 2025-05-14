@@ -1202,6 +1202,8 @@ PODS:
     - Firebase/Firestore (= 11.10.0)
     - firebase_core
     - Flutter
+  - device_info_plus (0.0.1):
+    - Flutter
   - Firebase/Auth (11.10.0):
     - Firebase/CoreOnly
     - FirebaseAuth (~> 11.10.0)
@@ -1215,7 +1217,7 @@ PODS:
     - firebase_core
     - FirebaseAppCheck (~> 11.10.0)
     - Flutter
-  - firebase_auth (5.5.2):
+  - firebase_auth (5.5.3):
     - Firebase/Auth (= 11.10.0)
     - firebase_core
     - Flutter
@@ -1397,6 +1399,7 @@ PODS:
 
 DEPENDENCIES:
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
+  - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - firebase_app_check (from `.symlinks/plugins/firebase_app_check/ios`)
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
@@ -1430,6 +1433,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   cloud_firestore:
     :path: ".symlinks/plugins/cloud_firestore/ios"
+  device_info_plus:
+    :path: ".symlinks/plugins/device_info_plus/ios"
   firebase_app_check:
     :path: ".symlinks/plugins/firebase_app_check/ios"
   firebase_auth:
@@ -1444,9 +1449,10 @@ SPEC CHECKSUMS:
   AppCheckCore: cc8fd0a3a230ddd401f326489c99990b013f0c4f
   BoringSSL-GRPC: dded2a44897e45f28f08ae87a55ee4bcd19bc508
   cloud_firestore: b7b3bfffcd2ea3205f612d5602f959a0ec33c7b0
+  device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
   Firebase: 1fe1c0a7d9aaea32efe01fbea5f0ebd8d70e53a2
   firebase_app_check: f91e7deb97687856aed4b12f02dba10be437492a
-  firebase_auth: 34c515a8fa76a4ef678ac5ad5cfa3bb3120f5ab5
+  firebase_auth: 83bf106e5ac670dd3a0af27a86be6cba16a85723
   firebase_core: 2d4534e7b489907dcede540c835b48981d890943
   FirebaseAppCheck: 9687ebd909702469bc09d2d58008697b83f4ac27
   FirebaseAppCheckInterop: f23709c9ce92d810aa53ff4ce12ad3e666a3c7be

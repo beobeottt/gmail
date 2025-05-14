@@ -67,17 +67,17 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: _selectedIndex == 0 ? buildLoginForm() : _pages[_selectedIndex],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.black,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-      ),
+      // bottomNavigationBar: BottomNavigationBar(
+      //   selectedItemColor: Colors.green,
+      //   unselectedItemColor: Colors.black,
+      //   items: const [
+      //     BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+      //     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
+      //     BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),
+      //   ],
+      //   currentIndex: _selectedIndex,
+      //   onTap: _onItemTapped,
+      // ),
     );
   }
 

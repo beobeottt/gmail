@@ -4,8 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'Verification_Code.dart';
 import 'package:get/get.dart';
 import 'dart:io';
-import 'dart:async';
-import 'package:device_info_plus/device_info_plus.dart';
 
 class RegisterPhonePage extends StatefulWidget {
   const RegisterPhonePage({Key? key}) : super(key: key);
@@ -17,15 +15,6 @@ class RegisterPhonePage extends StatefulWidget {
 class _RegisterPhonePageState extends State<RegisterPhonePage> {
   final _phoneController = TextEditingController();
   bool _isLoading = false;
-  final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
-
-  Future<bool> _isSimulator() async {
-    if (Platform.isIOS) {
-      final iosInfo = await _deviceInfo.iosInfo;
-      return !iosInfo.isPhysicalDevice;
-    }
-    return false;
-  }
 
   Future<void> sendVerificationCode() async {
     String phone = _phoneController.text.trim();
@@ -59,16 +48,8 @@ class _RegisterPhonePageState extends State<RegisterPhonePage> {
     });
 
     try {
-      // Kiểm tra nếu đang chạy trên simulator
-      bool isSimulator = false;
-      try {
-        isSimulator = await _isSimulator();
-      } catch (e) {
-        print('Error checking simulator: $e');
-      }
-
-      if (isSimulator) {
-        // Sử dụng số điện thoại test cho simulator
+      // Sử dụng số test cho simulator
+      if (Platform.isIOS) {
         phone = '+16505551234'; // Số điện thoại test của Firebase
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -184,7 +165,7 @@ class _RegisterPhonePageState extends State<RegisterPhonePage> {
                       border: Border(right: BorderSide(color: Colors.grey)),
                     ),
                     child: const Text(
-                      '+1',
+                      '+84',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
