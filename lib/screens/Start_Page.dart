@@ -3,7 +3,7 @@ import 'package:khoates/screens/Account_Page.dart';
 import 'package:khoates/screens/Setting_Page.dart' show SettingPage;
 import 'package:khoates/screens/login_page.dart';
 import 'Home_Page.dart';
-import 'Register_Page.dart';
+import 'Register_Page.dart' show LoginScreen;
 
 class StartPage extends StatefulWidget {
   const StartPage({Key? key}) : super(key: key);
@@ -21,11 +21,11 @@ class _StartPageState extends State<StartPage> {
     });
   }
 
-  final List<Widget> _pages = const [
-    RegisterPhonePage(),
-    HomePage(),
-    AccountPage(),
-    SettingPage(),
+  final List<Widget> _pages = [
+    LoginScreen(),
+    const HomePage(),
+    const AccountPage(),
+    const SettingPage(),
   ];
 
   @override

@@ -17,7 +17,7 @@ class _HomePageState extends State<HomePage> {
   final PageController _pageController = PageController();
   final List<Widget> _pages = [
     const LoginPage(),
-    const RegisterPhonePage(),
+    LoginPage(),
     const HomePage(),
   ];
   void _onItemTapped(int index) {
@@ -42,8 +42,8 @@ class _HomePageState extends State<HomePage> {
       ),
       // 2 button dưới đáy để chuyển các trang
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.blue,
-        selectedItemColor: Colors.green,
+        backgroundColor: Colors.grey,
+        selectedItemColor: Colors.white,
         unselectedItemColor: Colors.black,
 
         // onTap: (index) {
@@ -52,11 +52,11 @@ class _HomePageState extends State<HomePage> {
         //   });
         // },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.app_registration),
-            label: 'Register',
-          ),
+          // BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.app_registration),
+          //   label: 'Register',
+          // ),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           BottomNavigationBarItem(

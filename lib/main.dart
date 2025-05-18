@@ -5,10 +5,11 @@ import 'package:khoates/screens/Start_Page.dart';
 import 'package:get/get.dart';
 import 'package:khoates/screens/login_page.dart' show LoginPage;
 import 'firebase_options.dart';
+import 'package:khoates/screens/Verification_Code.dart' show VerifyOtpPage;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp();
 
   runApp(const MyApp());
 }
@@ -18,6 +19,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: StartPage());
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: StartPage(),
+    );
   }
 }

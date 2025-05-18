@@ -1,236 +1,75 @@
-// register_phone_page.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'Verification_Code.dart';
-import 'package:get/get.dart';
-import 'dart:io';
+import 'package:khoates/screens/otp.dart' show OTPScreen;
 
-class RegisterPhonePage extends StatefulWidget {
-  const RegisterPhonePage({Key? key}) : super(key: key);
-
+class LoginScreen extends StatefulWidget {
   @override
-  State<RegisterPhonePage> createState() => _RegisterPhonePageState();
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
-class _RegisterPhonePageState extends State<RegisterPhonePage> {
-  final _phoneController = TextEditingController();
-  bool _isLoading = false;
-
-  Future<void> sendVerificationCode() async {
-    String phone = _phoneController.text.trim();
-
-    // Validate phone number
-    if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập số điện thoại')),
-      );
-      return;
-    }
-
-    if (phone.length < 9 || phone.length > 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Số điện thoại phải có 9-10 chữ số')),
-      );
-      return;
-    }
-
-    // Format phone number to international format
-    if (!phone.startsWith('+')) {
-      if (phone.startsWith('0')) {
-        phone = '+84' + phone.substring(1);
-      } else {
-        phone = '+84' + phone;
-      }
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Sử dụng số test cho simulator
-      if (Platform.isIOS) {
-        phone = '+16505551234'; // Số điện thoại test của Firebase
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đang sử dụng số điện thoại test cho simulator'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phone,
-        timeout: const Duration(seconds: 60),
-        verificationCompleted: (PhoneAuthCredential credential) {
-          // Auto-verification completed (Android only)
-          print('Auto verification completed');
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          String errorMessage = 'Xác minh thất bại: ';
-          switch (e.code) {
-            case 'invalid-phone-number':
-              errorMessage += 'Số điện thoại không hợp lệ';
-              break;
-            case 'too-many-requests':
-              errorMessage += 'Quá nhiều yêu cầu. Vui lòng thử lại sau';
-              break;
-            case 'network-request-failed':
-              errorMessage += 'Lỗi kết nối mạng. Vui lòng kiểm tra lại';
-              break;
-            default:
-              errorMessage += e.message ?? 'Lỗi không xác định';
-          }
-          if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(errorMessage)));
-          }
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (context) => VerifyOtpPage(
-                      phoneNumber: phone,
-                      verificationId: verificationId,
-                    ),
-              ),
-            );
-          }
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Mã xác minh hết hạn. Vui lòng thử lại'),
-              ),
-            );
-          }
-        },
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi: ${e.toString()}')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _controller = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Đăng ký bằng số điện thoại"),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 20),
-            const Text(
-              'Nhập số điện thoại của bạn',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Chúng tôi sẽ gửi mã xác minh đến số điện thoại này',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 30),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.grey),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    decoration: const BoxDecoration(
-                      border: Border(right: BorderSide(color: Colors.grey)),
-                    ),
-                    child: const Text(
-                      '+84',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+      appBar: AppBar(title: Text('Phone Auth')),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            children: [
+              Container(
+                margin: EdgeInsets.only(top: 60),
+                child: Center(
+                  child: Text(
+                    'Phone Authentication',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 28),
                   ),
-                  Expanded(
-                    child: TextField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(
-                        hintText: 'Nhập số điện thoại',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 15),
-                      ),
-                      keyboardType: TextInputType.phone,
-                      onChanged: (value) {
-                        // Xóa số 0 ở đầu nếu người dùng nhập
-                        if (value.startsWith('0')) {
-                          _phoneController.text = value.substring(1);
-                          _phoneController
-                              .selection = TextSelection.fromPosition(
-                            TextPosition(offset: _phoneController.text.length),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _isLoading ? null : sendVerificationCode,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child:
-                  _isLoading
-                      ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                      : const Text(
-                        'Gửi mã xác minh',
-                        style: TextStyle(fontSize: 16),
+              Container(
+                margin: EdgeInsets.only(top: 40, right: 10, left: 10),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Phone Number',
+                    prefix: Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Text('+84'),
+                    ),
+                  ),
+                  maxLength: 10,
+                  keyboardType: TextInputType.number,
+                  controller: _controller,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            margin: EdgeInsets.all(10),
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              onPressed: () {
+                final phone = '+84${_controller.text.trim()}';
+                if (_controller.text.length == 10) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => OTPScreen(phone)),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Please enter a valid 10-digit phone number',
                       ),
+                    ),
+                  );
+                }
+              },
+              child: Text('Next', style: TextStyle(color: Colors.white)),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
   }
 }
