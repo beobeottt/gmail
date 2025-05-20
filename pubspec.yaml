@@ -41,6 +41,7 @@ dependencies:
   get: ^4.6.6
   pinput: ^5.0.1
   device_info_plus: ^11.4.0 # dùng để nhận diện với fe khi gửi otp
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

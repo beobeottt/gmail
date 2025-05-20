@@ -3,7 +3,7 @@ import 'package:khoates/screens/Account_Page.dart';
 import 'package:khoates/screens/Setting_Page.dart' show SettingPage;
 import 'package:khoates/screens/login_page.dart';
 import 'Home_Page.dart';
-import 'Register_Page.dart' show LoginScreen;
+import 'Register_Page.dart' show RegisterPhonePage;
 
 class StartPage extends StatefulWidget {
   const StartPage({Key? key}) : super(key: key);
@@ -13,20 +13,20 @@ class StartPage extends StatefulWidget {
 }
 
 class _StartPageState extends State<StartPage> {
-  int _selectedIndex = 0;
+  //int _selectedIndex = 0;
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  // void _onItemTapped(int index) {
+  //   setState(() {
+  //     _selectedIndex = index;
+  //   });
+  // }
 
-  final List<Widget> _pages = [
-    LoginScreen(),
-    const HomePage(),
-    const AccountPage(),
-    const SettingPage(),
-  ];
+  // final List<Widget> _pages = [
+  //   const RegisterPhonePage(),
+  //   const HomePage(),
+  //   const AccountPage(),
+  //   const SettingPage(),
+  // ];
 
   @override
   Widget build(BuildContext context) {
