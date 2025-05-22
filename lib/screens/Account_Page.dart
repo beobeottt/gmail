@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:khoates/screens/Setting_Page.dart';
+import 'package:khoates/widgets/Update_Profile.dart';
 import 'Home_Page.dart';
 
 class AccountPage extends StatefulWidget {
@@ -77,16 +79,25 @@ class _AccountPageState extends State<AccountPage> {
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               // Setting page
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SettingPage()),
+              );
             },
           ),
           ListTile(
             leading: const Icon(Icons.person),
-            title: const Text("Change Profile"),
+            title: const Text("Update Profile"),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               // change page to change password
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => UpdateProfile()),
+              );
             },
           ),
+          // Log Out button, this will ask you want to out this screen
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text("Logout"),

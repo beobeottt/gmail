@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class SettingPage extends StatefulWidget {
-  const SettingPage({Key? key}) : super(key: key);
+class UpdateProfile extends StatefulWidget {
+  const UpdateProfile({super.key});
 
   @override
-  State<SettingPage> createState() => _SettingPageState();
+  State<UpdateProfile> createState() => _UpdateProfileState();
 }
 
-class _SettingPageState extends State<SettingPage> {
+class _UpdateProfileState extends State<UpdateProfile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -18,9 +18,9 @@ class _SettingPageState extends State<SettingPage> {
             Navigator.pop(context); // Quay lại trang trước
           },
         ),
-        title: const Text('Settings'),
+        title: const Text('Update Profile'),
       ),
-      body: const Center(child: Text('This is the settings page')),
+      body: const Center(child: Text('This is Update Profile Page')),
     );
   }
 }
