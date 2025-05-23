@@ -20,7 +20,24 @@ class _UpdateProfileState extends State<UpdateProfile> {
         ),
         title: const Text('Update Profile'),
       ),
-      body: const Center(child: Text('This is Update Profile Page')),
+      body: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            children: [
+              Stack(),
+              const SizedBox(height: 50),
+              Form(
+                child: Column(
+                  children: [
+                    TextFormField(decoration: const InputDecoration()),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
