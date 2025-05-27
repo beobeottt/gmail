@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'Verification_Code.dart';
 import 'package:get/get.dart';
 import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 
 class RegisterPhonePage extends StatefulWidget {
   const RegisterPhonePage({Key? key}) : super(key: key);
@@ -12,23 +15,68 @@ class RegisterPhonePage extends StatefulWidget {
 }
 
 class _RegisterPhonePageState extends State<RegisterPhonePage> {
+  final _nameController = TextEditingController();
+  final _dobController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
   bool _isLoading = false;
+  int? _demoOtp;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _dobController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000, 1, 1),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      _dobController.text = "${picked.day}/${picked.month}/${picked.year}";
+    }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 
   Future<void> sendVerificationCode() async {
-    String phone = _phoneController.text.trim();
-
-    if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập số điện thoại')),
-      );
+    // Validate input
+    if (_nameController.text.trim().isEmpty) {
+      _showSnack('Vui lòng nhập tên');
       return;
     }
-
+    if (_dobController.text.trim().isEmpty) {
+      _showSnack('Vui lòng chọn ngày sinh');
+      return;
+    }
+    if (_emailController.text.trim().isEmpty ||
+        !_emailController.text.contains('@')) {
+      _showSnack('Vui lòng nhập email hợp lệ');
+      return;
+    }
+    if (_passwordController.text.trim().length < 6) {
+      _showSnack('Mật khẩu phải có ít nhất 6 ký tự');
+      return;
+    }
+    String phone = _phoneController.text.trim();
+    if (phone.isEmpty) {
+      _showSnack('Vui lòng nhập số điện thoại');
+      return;
+    }
     if (phone.length < 9 || phone.length > 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Số điện thoại phải có 9-10 chữ số')),
-      );
+      _showSnack('Số điện thoại phải có 9-10 chữ số');
       return;
     }
 
@@ -36,163 +84,102 @@ class _RegisterPhonePageState extends State<RegisterPhonePage> {
       _isLoading = true;
     });
 
-    try {
-      if ((Platform.isIOS || Platform.isAndroid)) {
-        // 💡 Simulator hoặc Emulator
-        phone = '+16505551234'; // Số test của Firebase
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Đang sử dụng số điện thoại test cho thiết bị giả lập',
-            ),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } else {
-        // 💡 Thiết bị thật
-        if (!phone.startsWith('+')) {
-          if (phone.startsWith('0')) {
-            phone = '+1${phone.substring(1)}';
-          } else {
-            phone = '+1$phone';
-          }
-        }
-      }
+    // Generate demo OTP
+    _demoOtp = math.Random().nextInt(900000) + 100000;
+    _showSnack('Mã OTP demo: $_demoOtp');
 
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phone,
-        timeout: const Duration(seconds: 60),
-        verificationCompleted: (PhoneAuthCredential credential) {
-          print('Auto verification completed');
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          String errorMessage = 'Xác minh thất bại: ';
-          switch (e.code) {
-            case 'invalid-phone-number':
-              errorMessage += 'Số điện thoại không hợp lệ';
-              break;
-            case 'too-many-requests':
-              errorMessage += 'Quá nhiều yêu cầu. Vui lòng thử lại sau';
-              break;
-            case 'network-request-failed':
-              errorMessage += 'Lỗi kết nối mạng. Vui lòng kiểm tra lại';
-              break;
-            default:
-              errorMessage += e.message ?? 'Lỗi không xác định';
-          }
-          if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(errorMessage)));
-          }
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (context) => VerifyOtpPage(
-                      phoneNumber: phone,
-                      verificationId: verificationId,
-                    ),
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => VerifyOtpPage(
+                name: _nameController.text.trim(),
+                dob: _dobController.text.trim(),
+                email: _emailController.text.trim(),
+                password: _passwordController.text.trim(),
+                phone: phone,
+                demoOtp: _demoOtp!,
               ),
-            );
-          }
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Mã xác minh hết hạn. Vui lòng thử lại'),
-              ),
-            );
-          }
-        },
+        ),
       );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi: ${e.toString()}')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Đăng ký bằng số điện thoại"),
-        centerTitle: true,
-      ),
-      body: Padding(
+      appBar: AppBar(title: const Text('Đăng ký tài khoản'), centerTitle: true),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 20),
-            const Text(
-              'Nhập số điện thoại của bạn',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Chúng tôi sẽ gửi mã xác minh đến số điện thoại này',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 30),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.grey),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: 'Họ và tên',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    decoration: const BoxDecoration(
-                      border: Border(right: BorderSide(color: Colors.grey)),
-                    ),
-                    // child: const Text(
-                    //   '+1',
-                    //   style: TextStyle(
-                    //     fontSize: 16,
-                    //     fontWeight: FontWeight.bold,
-                    //   ),
-                    // ),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(
-                        hintText: 'Nhập số điện thoại',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 15),
-                      ),
-                      keyboardType: TextInputType.phone,
-                      onChanged: (value) {
-                        if (value.startsWith('0')) {
-                          _phoneController.text = value.substring(1);
-                          _phoneController
-                              .selection = TextSelection.fromPosition(
-                            TextPosition(offset: _phoneController.text.length),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ],
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _dobController,
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: 'Ngày sinh',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
+              onTap: _selectDate,
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'Mật khẩu',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'Số điện thoại',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onChanged: (value) {
+                if (value.startsWith('0')) {
+                  _phoneController.text = value.substring(1);
+                  _phoneController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _phoneController.text.length),
+                  );
+                }
+              },
             ),
             const SizedBox(height: 30),
             ElevatedButton(
@@ -205,30 +192,12 @@ class _RegisterPhonePageState extends State<RegisterPhonePage> {
               ),
               child:
                   _isLoading
-                      ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                      : const Text(
-                        'Gửi mã xác minh',
-                        style: TextStyle(fontSize: 16),
-                      ),
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Đăng ký', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
   }
 }

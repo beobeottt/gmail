@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:khoates/screens/Account_Page.dart';
+import 'package:khoates/screens/Forgot_Password.dart';
+import 'package:khoates/screens/Gmail_Page.dart';
 import 'package:khoates/screens/Home_Page.dart' show HomePage;
 import 'package:khoates/screens/Setting_Page.dart';
 import 'Register_Page.dart';
@@ -14,14 +16,9 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   int _selectedIndex = 0;
-
-  final List<Widget> _pages = [
-    const HomePage(),
-    const AccountPage(),
-    const SettingPage(),
-  ];
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _auth = FirebaseAuth.instance;
 
   void _onItemTapped(int index) {
     setState(() {
@@ -30,33 +27,31 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future signIn() async {
+    // check email, password is null
+    final _email = _emailController.text.trim();
+    final _password = _passwordController.text.trim();
+    if (_email.isEmpty || _password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Vui lòng nhập đầy đủ email và mật khẩu.")),
+      );
+      return;
+    }
     try {
-      String email = _emailController.text.trim();
-      String password = _passwordController.text.trim();
-
-      if (email.isEmpty || password.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Vui lòng nhập đầy đủ email và mật khẩu.")),
-        );
-        return;
-      }
-
-      // Đăng nhập bằng email thật
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+      // login with real Account from firebase
+      await _auth.signInWithEmailAndPassword(
+        email: _email,
+        password: _password,
       );
 
       // Chuyển đến HomePage nếu đăng nhập thành công
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomePage()),
+        MaterialPageRoute(builder: (context) => GmailPage()),
       );
     } catch (e) {
-      print('Lỗi đăng nhập: $e');
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Lỗi đăng nhập: ${e.toString()}')));
+      ).showSnackBar(SnackBar(content: Text('Login False!!')));
     }
   }
 
@@ -64,20 +59,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[300],
-      body: SafeArea(
-        child: _selectedIndex == 0 ? buildLoginForm() : _pages[_selectedIndex],
-      ),
-      // bottomNavigationBar: BottomNavigationBar(
-      //   selectedItemColor: Colors.green,
-      //   unselectedItemColor: Colors.black,
-      //   items: const [
-      //     BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-      //     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
-      //     BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),
-      //   ],
-      //   currentIndex: _selectedIndex,
-      //   onTap: _onItemTapped,
-      // ),
+      body: SafeArea(child: buildLoginForm()),
     );
   }
 
@@ -156,6 +138,20 @@ class _LoginPageState extends State<LoginPage> {
               },
               child: Text(
                 'Not a member? Register',
+                style: TextStyle(color: Colors.blue),
+              ),
+            ),
+
+            // Forgot Password
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
+                );
+              },
+              child: Text(
+                'Forgot Password?',
                 style: TextStyle(color: Colors.blue),
               ),
             ),
