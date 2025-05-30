@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:khoates/screens/Setting_Page.dart';
 import 'package:khoates/widgets/Update_Profile.dart';
+import 'Gmail_Page.dart';
 import 'Home_Page.dart';
 
 class AccountPage extends StatefulWidget {
@@ -53,7 +54,18 @@ class _AccountPageState extends State<AccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile'), centerTitle: true),
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed:
+              () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const GmailPage()),
+              ),
+          icon: Icon(Icons.arrow_back),
+        ),
+        title: const Text('Profile'),
+        centerTitle: true,
+      ),
       body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         future: _fetchProfile(),
         builder: (context, snap) {

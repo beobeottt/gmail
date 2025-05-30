@@ -3,69 +3,75 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:khoates/screens/Compose_Email_Page.dart';
 import 'package:khoates/screens/Account_Page.dart';
+import 'package:khoates/screens/Gmail_Page.dart' show GmailPage;
+import 'package:khoates/screens/Home_Page.dart' show HomePage;
 import 'package:khoates/screens/Send_mail.dart';
 import 'package:khoates/screens/Starred_Page.dart';
-import '../models/email_model.dart';
-import 'Home_Page.dart';
 
-class GmailPage extends StatefulWidget {
-  const GmailPage({Key? key}) : super(key: key);
+class SendMailPage extends StatefulWidget {
+  const SendMailPage({Key? key}) : super(key: key);
 
   @override
-  State<GmailPage> createState() => _GmailPageState();
+  State<SendMailPage> createState() => _SendMailPageState();
 }
 
-class _GmailPageState extends State<GmailPage> {
+class _SendMailPageState extends State<SendMailPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  /// Fetch inbox emails
-  Future<List<Email>> fetchEmails() async {
+  /// Fetch only emails sent by the current user
+  Future<List<EmailModel>> fetchSentEmails() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || user.email == null) return [];
-    final snap =
+    final me = user.email!;
+
+    final snapshot =
         await FirebaseFirestore.instance
             .collection('emails')
-            .where('to', isEqualTo: user.email!)
+            .where('from', isEqualTo: me)
             .get();
-    return snap.docs.map((d) => Email.fromDoc(d)).toList();
+
+    return snapshot.docs.map((doc) => EmailModel.fromMap(doc.data())).toList();
   }
 
   Widget _buildProfileAvatar() {
     final user = FirebaseAuth.instance.currentUser;
-    if (user?.photoURL != null) {
+    if (user != null && user.photoURL != null) {
       return GestureDetector(
         onTap:
             () => Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const AccountPage()),
             ),
-        child: CircleAvatar(backgroundImage: NetworkImage(user!.photoURL!)),
+        child: CircleAvatar(backgroundImage: NetworkImage(user.photoURL!)),
+      );
+    } else if (user != null &&
+        user.displayName != null &&
+        user.displayName!.isNotEmpty) {
+      return GestureDetector(
+        onTap:
+            () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const AccountPage()),
+            ),
+        child: CircleAvatar(
+          child: Text(user.displayName!.substring(0, 1).toUpperCase()),
+        ),
+      );
+    } else {
+      return GestureDetector(
+        onTap:
+            () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const AccountPage()),
+            ),
+        child: const CircleAvatar(child: Icon(Icons.person_outline)),
       );
     }
-    final initial =
-        (user?.displayName?.isNotEmpty == true)
-            ? user!.displayName![0].toUpperCase()
-            : '?';
-    return GestureDetector(
-      onTap:
-          () => Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const AccountPage()),
-          ),
-      child: CircleAvatar(child: Text(initial)),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text('Gmail'),
-      ),
       key: _scaffoldKey,
       drawer: Drawer(
         child: ListView(
@@ -119,7 +125,7 @@ class _GmailPageState extends State<GmailPage> {
               title: const Text('Compose Email'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
+                Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (_) => const ComposeEmailPage()),
                 );
@@ -154,20 +160,20 @@ class _GmailPageState extends State<GmailPage> {
                   () => showDialog(
                     context: context,
                     builder:
-                        (ctx) => AlertDialog(
+                        (context) => AlertDialog(
                           title: const Text('Confirm Logout'),
                           content: const Text(
                             'Are you sure you want to log out?',
                           ),
                           actions: [
                             TextButton(
-                              onPressed: () => Navigator.pop(ctx),
+                              onPressed: () => Navigator.pop(context),
                               child: const Text('Cancel'),
                             ),
                             TextButton(
                               onPressed: () async {
                                 await FirebaseAuth.instance.signOut();
-                                Navigator.pop(ctx);
+                                Navigator.pop(context);
                                 Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
@@ -185,91 +191,36 @@ class _GmailPageState extends State<GmailPage> {
           ],
         ),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.menu, color: Colors.black),
-                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[200],
-                        hintText: 'Search Mail',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildProfileAvatar(),
-                ],
-              ),
-            ),
-            Expanded(
-              child: FutureBuilder<List<Email>>(
-                future: fetchEmails(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-                  final emails = snapshot.data ?? [];
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    itemCount: emails.length,
-                    itemBuilder: (context, i) {
-                      final email = emails[i];
-                      return ListTile(
-                        leading: CircleAvatar(child: Text(email.sender[0])),
-                        title: Text(
-                          email.subject,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: email.isRead ? Colors.grey : Colors.black,
-                          ),
-                        ),
-                        subtitle: Text(email.sender),
-                        trailing: IconButton(
-                          icon: Icon(
-                            email.isStarred ? Icons.star : Icons.star_border,
-                            color:
-                                email.isStarred ? Colors.orange : Colors.grey,
-                          ),
-                          onPressed: () async {
-                            await FirebaseFirestore.instance
-                                .collection('emails')
-                                .doc(email.id)
-                                .update({'isStarred': !email.isStarred});
-                            setState(() {});
-                          },
-                        ),
-                        onTap: () {
-                          // open email
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+      appBar: AppBar(
+        title: const Text('Sent'),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
         ),
+      ),
+      body: FutureBuilder<List<EmailModel>>(
+        future: fetchSentEmails(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: \${snapshot.error}'));
+          }
+          final emails = snapshot.data ?? [];
+          if (emails.isEmpty) {
+            return const Center(child: Text('No sent emails.'));
+          }
+          return ListView.builder(
+            itemCount: emails.length,
+            itemBuilder: (context, i) {
+              final item = emails[i];
+              return _normalItem(item);
+            },
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed:
@@ -282,5 +233,64 @@ class _GmailPageState extends State<GmailPage> {
         child: const Icon(Icons.add, color: Colors.red),
       ),
     );
+  }
+
+  Widget _normalItem(EmailModel item) {
+    return ListTile(
+      leading: item.icon,
+      title: Text(
+        item.subject,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      subtitle: Text(item.body),
+      trailing: Text(item.time),
+    );
+  }
+}
+
+class EmailModel {
+  final Icon icon;
+  final String subject;
+  final String body;
+  final String from;
+  final String time;
+  final bool isTopItem;
+  final bool isRead;
+
+  EmailModel(
+    this.icon,
+    this.subject,
+    this.body,
+    this.from,
+    this.time,
+    this.isTopItem, [
+    this.isRead = false,
+  ]);
+
+  factory EmailModel.fromMap(Map<String, dynamic> data) {
+    return EmailModel(
+      _getIconByName(data['icon']),
+      data['subject'] ?? '',
+      data['body'] ?? '',
+      data['from'] ?? '',
+      data['time'] ?? '',
+      data['isTopItem'] ?? false,
+      data['isRead'] ?? false,
+    );
+  }
+
+  static Icon _getIconByName(String? name) {
+    switch (name) {
+      case 'people':
+        return const Icon(Icons.people_outline_rounded, color: Colors.blue);
+      case 'tag':
+        return const Icon(Icons.tag, color: Colors.green);
+      case 'forum':
+        return const Icon(Icons.forum_outlined, color: Colors.purple);
+      case 'person':
+        return const Icon(Icons.person_outline, color: Colors.white);
+      default:
+        return const Icon(Icons.email, color: Colors.grey);
+    }
   }
 }
