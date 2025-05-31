@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:khoates/screens/Compose_Email_Page.dart';
-import 'package:khoates/screens/Account_Page.dart';
-import 'package:khoates/screens/Send_mail.dart';
-import 'package:khoates/screens/Starred_Page.dart';
 import '../models/email_model.dart';
+import 'Compose_Email_Page.dart';
+import 'Account_Page.dart';
+import 'package:khoates/widgets/email_title.dart';
+import 'Send_mail.dart';
+import 'Starred_Page.dart';
 import 'Home_Page.dart';
 
 class GmailPage extends StatefulWidget {
@@ -18,16 +19,19 @@ class GmailPage extends StatefulWidget {
 class _GmailPageState extends State<GmailPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  /// Fetch inbox emails
+  /// Lấy tất cả email có 'to' == user.email, sắp xếp theo 'date' giảm dần.
   Future<List<Email>> fetchEmails() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || user.email == null) return [];
-    final snap =
+    final me = user.email!;
+
+    final snapshot =
         await FirebaseFirestore.instance
             .collection('emails')
-            .where('to', isEqualTo: user.email!)
+            .where('to', isEqualTo: me)
             .get();
-    return snap.docs.map((d) => Email.fromDoc(d)).toList();
+
+    return snapshot.docs.map((doc) => Email.fromDoc(doc)).toList();
   }
 
   Widget _buildProfileAvatar() {
@@ -59,14 +63,18 @@ class _GmailPageState extends State<GmailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
+
+      // AppBar với nút Back và tiêu đề
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Gmail'),
+        title: const Text('Gmail'),
       ),
-      key: _scaffoldKey,
+
+      // Drawer menu
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -78,6 +86,8 @@ class _GmailPageState extends State<GmailPage> {
                 style: TextStyle(color: Colors.white, fontSize: 24),
               ),
             ),
+
+            // Inbox (trang hiện tại)
             ListTile(
               leading: const Icon(Icons.inbox),
               title: const Text('Inbox'),
@@ -90,6 +100,8 @@ class _GmailPageState extends State<GmailPage> {
               },
             ),
             const Divider(),
+
+            // Starred
             ListTile(
               leading: const Icon(Icons.star),
               title: const Text('Starred'),
@@ -102,6 +114,8 @@ class _GmailPageState extends State<GmailPage> {
               },
             ),
             const Divider(),
+
+            // Sent
             ListTile(
               leading: const Icon(Icons.send),
               title: const Text('Sent'),
@@ -114,6 +128,8 @@ class _GmailPageState extends State<GmailPage> {
               },
             ),
             const Divider(),
+
+            // Compose Email
             ListTile(
               leading: const Icon(Icons.add),
               title: const Text('Compose Email'),
@@ -126,6 +142,8 @@ class _GmailPageState extends State<GmailPage> {
               },
             ),
             const Divider(),
+
+            // Profile
             ListTile(
               leading: const Icon(Icons.person),
               title: const Text('Profile'),
@@ -138,15 +156,19 @@ class _GmailPageState extends State<GmailPage> {
               },
             ),
             const Divider(),
+
+            // Refresh
             ListTile(
               leading: const Icon(Icons.refresh),
               title: const Text('Refresh'),
               onTap: () {
                 Navigator.pop(context);
-                setState(() {});
+                setState(() {}); // Reload lại FutureBuilder
               },
             ),
             const Divider(),
+
+            // Logout
             ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
@@ -185,9 +207,12 @@ class _GmailPageState extends State<GmailPage> {
           ],
         ),
       ),
+
+      // Body: Search bar + danh sách email
       body: SafeArea(
         child: Column(
           children: [
+            // Search bar + avatar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
@@ -219,6 +244,8 @@ class _GmailPageState extends State<GmailPage> {
                 ],
               ),
             ),
+
+            // Danh sách email
             Expanded(
               child: FutureBuilder<List<Email>>(
                 future: fetchEmails(),
@@ -229,40 +256,18 @@ class _GmailPageState extends State<GmailPage> {
                   if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}'));
                   }
+
                   final emails = snapshot.data ?? [];
+                  if (emails.isEmpty) {
+                    return const Center(child: Text('Không có email nào.'));
+                  }
+
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     itemCount: emails.length,
                     itemBuilder: (context, i) {
                       final email = emails[i];
-                      return ListTile(
-                        leading: CircleAvatar(child: Text(email.sender[0])),
-                        title: Text(
-                          email.subject,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: email.isRead ? Colors.grey : Colors.black,
-                          ),
-                        ),
-                        subtitle: Text(email.sender),
-                        trailing: IconButton(
-                          icon: Icon(
-                            email.isStarred ? Icons.star : Icons.star_border,
-                            color:
-                                email.isStarred ? Colors.orange : Colors.grey,
-                          ),
-                          onPressed: () async {
-                            await FirebaseFirestore.instance
-                                .collection('emails')
-                                .doc(email.id)
-                                .update({'isStarred': !email.isStarred});
-                            setState(() {});
-                          },
-                        ),
-                        onTap: () {
-                          // open email
-                        },
-                      );
+                      return _emailTile(email);
                     },
                   );
                 },
@@ -271,6 +276,8 @@ class _GmailPageState extends State<GmailPage> {
           ],
         ),
       ),
+
+      // Nút Compose
       floatingActionButton: FloatingActionButton(
         onPressed:
             () => Navigator.push(
@@ -281,6 +288,54 @@ class _GmailPageState extends State<GmailPage> {
         backgroundColor: Colors.white,
         child: const Icon(Icons.add, color: Colors.red),
       ),
+    );
+  }
+
+  /// Widget ListTile đại diện cho một email trong GmailPage
+  Widget _emailTile(Email email) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      leading: CircleAvatar(
+        child: Text(email.from.isNotEmpty ? email.from[0].toUpperCase() : '?'),
+      ),
+      title: Text(
+        email.subject,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: email.isRead ? Colors.grey : Colors.black,
+        ),
+      ),
+      subtitle: Text(email.from),
+      trailing: IconButton(
+        icon: Icon(
+          email.isStarred ? Icons.star : Icons.star_border,
+          color: email.isStarred ? Colors.orange : Colors.grey,
+        ),
+        onPressed: () async {
+          try {
+            // Cập nhật giá trị isStarred (toggle)
+            await FirebaseFirestore.instance
+                .collection('emails')
+                .doc(email.id)
+                .update({'isStarred': !email.isStarred});
+            // Đánh dấu đã xong, refresh lại giao diện
+            setState(() {});
+          } catch (e) {
+            debugPrint('Error updating isStarred: $e');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Không thể cập nhật Starred: $e')),
+            );
+          }
+        },
+      ),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => EmailDetailPage(email: email)),
+        ).then((_) {
+          setState(() {});
+        });
+      },
     );
   }
 }

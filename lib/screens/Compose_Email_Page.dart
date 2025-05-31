@@ -37,20 +37,29 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
     setState(() => _isSending = true);
 
     try {
-      // 1) Lưu vào Firestore
-      await FirebaseFirestore.instance.collection('emails').add({
+      // 1) Tạo DocumentReference mới để Firestore sinh ID
+      final docRef = FirebaseFirestore.instance.collection('emails').doc();
+
+      // 2) Lấy id do Firestore sinh ra
+      final emailId = docRef.id;
+
+      // 3) Ghi dữ liệu lên Firestore kèm thêm field "id"
+      await docRef.set({
+        'id': emailId, // đính kèm id của document
         'from': from,
         'to': to,
         'subject': subject,
         'body': body,
+        'date': FieldValue.serverTimestamp(),
         'time': DateTime.now().toIso8601String(),
         'isTopItem': false,
         'isRead': true,
+        'isStarred': false,
         'isSent': true,
         'icon': 'send',
       });
 
-      // 2) Reset form & thông báo
+      // 4) Reset form & thông báo
       _toController.clear();
       _subjectController.clear();
       _bodyController.clear();
@@ -58,14 +67,14 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text("Email đã được lưu và gửi")));
 
-      // 3) Quay về inbox hoặc page khác (tuỳ bạn)
-      Navigator.pop(context);
+      // 5) Quay về trang trước hoặc inbox
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Lỗi khi gửi: ${e.toString()}")));
     } finally {
-      setState(() => _isSending = false);
+      if (mounted) setState(() => _isSending = false);
     }
   }
 

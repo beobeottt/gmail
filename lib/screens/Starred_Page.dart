@@ -1,3 +1,5 @@
+// lib/screens/Starred_Page.dart
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -5,8 +7,8 @@ import 'package:khoates/screens/Compose_Email_Page.dart';
 import 'package:khoates/screens/Account_Page.dart';
 import 'package:khoates/screens/Gmail_Page.dart' show GmailPage;
 import 'package:khoates/screens/Send_mail.dart';
-import 'package:khoates/screens/Starred_Page.dart';
-
+import '../models/email_model.dart';
+import '../widgets/email_title.dart';
 import 'Home_Page.dart';
 
 class StarredPage extends StatefulWidget {
@@ -19,12 +21,51 @@ class StarredPage extends StatefulWidget {
 class _StarredPageState extends State<StarredPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  Future<List<EmailModel>> fetchEmails() async {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('emails').get();
-    return snapshot.docs.map((doc) => EmailModel.fromMap(doc.data())).toList();
+  /// 1) Hàm fetchEmails đưa ra danh sách Email đã được star, gán debugPrint
+  /// để in log rõ ràng, giúp kiểm tra index, dữ liệu Firestore.
+  Future<List<Email>> fetchEmails() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.email == null) {
+      debugPrint('fetchEmails: user chưa login hoặc user.email == null');
+      return [];
+    }
+    final email = user.email!;
+    debugPrint('fetchEmails: user.email = $email');
+
+    try {
+      // Bước 1: Test chỉ WHERE("to", isEqualTo: email)
+      final onlyToSnap =
+          await FirebaseFirestore.instance
+              .collection('emails')
+              .where('to', isEqualTo: email)
+              .get();
+      debugPrint('  [Debug] only where(to): count = ${onlyToSnap.docs.length}');
+
+      // Bước 2: Test thêm WHERE("isStarred", true)
+      final starredSnap =
+          await FirebaseFirestore.instance
+              .collection('emails')
+              .where('to', isEqualTo: email)
+              .where('isStarred', isEqualTo: true)
+              .get();
+      debugPrint(
+        '  [Debug] where(to)+where(isStarred): count = ${starredSnap.docs.length}',
+      );
+
+      // In ra data để kiểm tra (nếu có)
+      for (var doc in starredSnap.docs) {
+        debugPrint('    DocID=${doc.id}, data=${doc.data()}');
+      }
+
+      return starredSnap.docs.map((doc) => Email.fromDoc(doc)).toList();
+    } catch (e) {
+      debugPrint('fetchEmails: Lỗi khi query Firebase: $e');
+      // Nếu lỗi require-index, e.toString() sẽ chứa URL gợi link tạo index
+      return [];
+    }
   }
 
+  /// 2) Biểu tượng profile avatar góc trên cùng
   Widget _buildProfileAvatar() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null && user.photoURL != null) {
@@ -76,6 +117,7 @@ class _StarredPageState extends State<StarredPage> {
                 style: TextStyle(color: Colors.white, fontSize: 24),
               ),
             ),
+            // Inbox
             ListTile(
               leading: const Icon(Icons.inbox),
               title: const Text('Inbox'),
@@ -84,25 +126,20 @@ class _StarredPageState extends State<StarredPage> {
                 Navigator.pop(context);
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => GmailPage()),
+                  MaterialPageRoute(builder: (_) => const GmailPage()),
                 );
               },
             ),
             const Divider(),
+            // Starred (đang ở trang này)
             ListTile(
               leading: const Icon(Icons.star),
               title: const Text('Starred'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => StarredPage()),
-                );
-              },
+              onTap: () => Navigator.pop(context),
             ),
-
             const Divider(),
+            // Sent
             ListTile(
               leading: const Icon(Icons.send),
               title: const Text('Sent'),
@@ -111,26 +148,26 @@ class _StarredPageState extends State<StarredPage> {
                 Navigator.pop(context);
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => SendMailPage()),
+                  MaterialPageRoute(builder: (_) => const SendMailPage()),
                 );
               },
             ),
-
             const Divider(),
+            // Compose Email
             ListTile(
               leading: const Icon(Icons.add),
               title: const Text('Compose Email'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushReplacement(
+                Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => ComposeEmailPage()),
+                  MaterialPageRoute(builder: (_) => const ComposeEmailPage()),
                 );
               },
             ),
-
             const Divider(),
+            // Profile
             ListTile(
               leading: const Icon(Icons.person),
               title: const Text('Profile'),
@@ -143,30 +180,29 @@ class _StarredPageState extends State<StarredPage> {
                 );
               },
             ),
-
             const Divider(),
+            // Refresh
             ListTile(
               leading: const Icon(Icons.refresh),
-              title: const Text('Refresh Gmail'),
+              title: const Text('Refresh'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
-                setState(() {});
+                setState(() {}); // gọi lại build → FutureBuilder reload
               },
             ),
-
             const Divider(),
-
+            // Logout
             ListTile(
               leading: const Icon(Icons.logout),
-              title: const Text('LogOut'),
+              title: const Text('Logout'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap:
                   () => showDialog(
                     context: context,
                     builder:
                         (context) => AlertDialog(
-                          title: const Text('confirm Logout'),
+                          title: const Text('Confirm Logout'),
                           content: const Text(
                             'Are you sure you want to log out?',
                           ),
@@ -198,6 +234,7 @@ class _StarredPageState extends State<StarredPage> {
       ),
       body: CustomScrollView(
         slivers: [
+          // SliverAppBar với nút back + search + avatar
           SliverAppBar(
             pinned: true,
             backgroundColor: Colors.white,
@@ -207,12 +244,12 @@ class _StarredPageState extends State<StarredPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Back button at top
+                  // Nút Back
                   IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.black),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  // Bottom row: hamburger, search bar, avatar
+                  // Search + Avatar
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -251,25 +288,47 @@ class _StarredPageState extends State<StarredPage> {
               ),
             ),
           ),
+
+          // Nơi hiện danh sách email đã star
           SliverToBoxAdapter(
-            child: FutureBuilder<List<EmailModel>>(
+            child: FutureBuilder<List<Email>>(
               future: fetchEmails(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
                 }
                 if (snapshot.hasError) {
-                  return Center(child: Text("Lỗi: ${snapshot.error}"));
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 40),
+                    child: Center(child: Text("Lỗi: ${snapshot.error}")),
+                  );
                 }
 
                 final emails = snapshot.data ?? [];
-                return Column(
-                  children:
-                      emails.map((item) {
-                        return item.isTopItem
-                            ? _topItem(item)
-                            : _normalItem(item);
-                      }).toList(),
+                if (emails.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: Center(
+                      child: Text("Bạn chưa có email nào được tim."),
+                    ),
+                  );
+                }
+
+                // Dùng ListView.builder trong SliverToBoxAdapter
+                return SizedBox(
+                  height: MediaQuery.of(context).size.height - 180,
+                  // Trừ 180 để phần SliverAppBar + padding chạy ổn
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: emails.length,
+                    itemBuilder: (context, index) {
+                      final item = emails[index];
+                      return _emailItem(item);
+                    },
+                  ),
                 );
               },
             ),
@@ -280,7 +339,7 @@ class _StarredPageState extends State<StarredPage> {
         onPressed:
             () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => ComposeEmailPage()),
+              MaterialPageRoute(builder: (_) => const ComposeEmailPage()),
             ),
         tooltip: 'Compose',
         backgroundColor: Colors.white,
@@ -289,137 +348,58 @@ class _StarredPageState extends State<StarredPage> {
     );
   }
 
-  Widget _topItem(EmailModel item) {
+  /// Widget hiển thị 1 email đã star
+  Widget _emailItem(Email item) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       tileColor: Colors.white,
-      leading: item.icon,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      leading: CircleAvatar(
+        backgroundColor: Colors.redAccent,
+        child: Text(
+          item.from.isNotEmpty ? item.from[0].toUpperCase() : '?',
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            item.subject,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(item.body, style: const TextStyle(color: Colors.grey)),
-        ],
-      ),
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: item.icon.color,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Text(
-          "12 new",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _normalItem(EmailModel item) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      tileColor: Colors.white,
-      leading: CircleAvatar(backgroundColor: Colors.red, child: item.icon),
-      title: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  item.from,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: item.isRead ? Colors.grey : Colors.black,
-                  ),
-                ),
-                Text(
-                  item.time,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: item.isRead ? Colors.grey : Colors.black,
-                  ),
-                ),
-              ],
-            ),
-            Text(
+          Expanded(
+            child: Text(
               item.subject,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: item.isRead ? Colors.grey : Colors.black,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    item.body,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ),
-                const Icon(Icons.star_border_outlined, color: Colors.grey),
-              ],
+          ),
+          // Icon star cứng để chỉ rằng đây là email đã star
+          const Icon(Icons.star, color: Colors.orange, size: 20),
+        ],
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              item.from,
+              style: TextStyle(color: item.isRead ? Colors.grey : Colors.black),
+            ),
+            Text(
+              item.time,
+              style: TextStyle(color: item.isRead ? Colors.grey : Colors.black),
             ),
           ],
         ),
       ),
+      onTap: () {
+        // Nếu bạn có màn hình chi tiết email, có thể push qua đó:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => EmailDetailPage(email: item)),
+        );
+      },
     );
-  }
-}
-
-class EmailModel {
-  final Icon icon;
-  final String subject;
-  final String body;
-  final String from;
-  final String time;
-  final bool isTopItem;
-  final bool isRead;
-
-  EmailModel(
-    this.icon,
-    this.subject,
-    this.body,
-    this.from,
-    this.time,
-    this.isTopItem, [
-    this.isRead = false,
-  ]);
-
-  factory EmailModel.fromMap(Map<String, dynamic> data) {
-    return EmailModel(
-      _getIconByName(data['icon']),
-      data['subject'] ?? '',
-      data['body'] ?? '',
-      data['from'] ?? '',
-      data['time'] ?? '',
-      data['isTopItem'] ?? false,
-      data['isRead'] ?? false,
-    );
-  }
-
-  static Icon _getIconByName(String? name) {
-    switch (name) {
-      case 'people':
-        return const Icon(Icons.people_outline_rounded, color: Colors.blue);
-      case 'tag':
-        return const Icon(Icons.tag, color: Colors.green);
-      case 'forum':
-        return const Icon(Icons.forum_outlined, color: Colors.purple);
-      case 'person':
-        return const Icon(Icons.person_outline, color: Colors.white);
-      default:
-        return const Icon(Icons.email, color: Colors.grey);
-    }
   }
 }
