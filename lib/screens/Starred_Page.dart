@@ -247,7 +247,13 @@ class _StarredPageState extends State<StarredPage> {
                   // Nút Back
                   IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.black),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const GmailPage()),
+                      );
+                    },
                   ),
                   // Search + Avatar
                   Padding(
@@ -303,7 +309,7 @@ class _StarredPageState extends State<StarredPage> {
                 if (snapshot.hasError) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 40),
-                    child: Center(child: Text("Lỗi: ${snapshot.error}")),
+                    child: Center(child: Text("error: ${snapshot.error}")),
                   );
                 }
 
@@ -394,7 +400,7 @@ class _StarredPageState extends State<StarredPage> {
         ),
       ),
       onTap: () {
-        // Nếu bạn có màn hình chi tiết email, có thể push qua đó:
+        // push qua Email_title_page
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => EmailDetailPage(email: item)),

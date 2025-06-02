@@ -8,6 +8,7 @@ import 'package:khoates/widgets/email_title.dart';
 import 'Send_mail.dart';
 import 'Starred_Page.dart';
 import 'Home_Page.dart';
+import 'draft_Page.dart';
 
 class GmailPage extends StatefulWidget {
   const GmailPage({Key? key}) : super(key: key);
@@ -124,6 +125,20 @@ class _GmailPageState extends State<GmailPage> {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (_) => const SendMailPage()),
+                );
+              },
+            ),
+            const Divider(),
+
+            // Drafts
+            ListTile(
+              leading: const Icon(Icons.drafts),
+              title: const Text('Bản nháp'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DraftPage()),
                 );
               },
             ),

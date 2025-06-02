@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../models/draft_email_model.dart';
+import 'dart:async';
 
 class ComposeEmailPage extends StatefulWidget {
-  const ComposeEmailPage({Key? key}) : super(key: key);
+  final DraftEmail? draftEmail;
+
+  const ComposeEmailPage({Key? key, this.draftEmail}) : super(key: key);
 
   @override
-  _ComposeEmailPageState createState() => _ComposeEmailPageState();
+  State<ComposeEmailPage> createState() => _ComposeEmailPageState();
 }
 
 class _ComposeEmailPageState extends State<ComposeEmailPage> {
@@ -14,6 +18,73 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
   final _subjectController = TextEditingController();
   final _bodyController = TextEditingController();
   bool _isSending = false;
+  Timer? _autoSaveTimer;
+  String? _currentDraftId;
+  bool _hasChanges = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.draftEmail != null) {
+      _toController.text = widget.draftEmail!.to;
+      _subjectController.text = widget.draftEmail!.subject;
+      _bodyController.text = widget.draftEmail!.body;
+      _currentDraftId = widget.draftEmail!.id;
+    }
+    _setupAutoSave();
+  }
+
+  void _setupAutoSave() {
+    // Auto-save every 30 seconds if there are changes
+    _autoSaveTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (_hasChanges) {
+        _saveDraft(isAutoSaved: true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoSaveTimer?.cancel();
+    _toController.dispose();
+    _subjectController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveDraft({bool isAutoSaved = false}) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.email == null) return;
+
+    final draft = DraftEmail(
+      id: _currentDraftId ?? '',
+      from: user!.email!,
+      to: _toController.text.trim(),
+      subject: _subjectController.text.trim(),
+      body: _bodyController.text.trim(),
+      lastModified: DateTime.now(),
+      isAutoSaved: isAutoSaved,
+    );
+
+    try {
+      if (_currentDraftId == null) {
+        // Create new draft
+        final docRef = await FirebaseFirestore.instance
+            .collection('drafts')
+            .add(draft.toMap());
+        _currentDraftId = docRef.id;
+      } else {
+        // Update existing draft
+        await FirebaseFirestore.instance
+            .collection('drafts')
+            .doc(_currentDraftId)
+            .update(draft.toMap());
+      }
+      _hasChanges = false;
+    } catch (e) {
+      debugPrint('Error saving draft: $e');
+    }
+  }
 
   Future<void> _sendEmail() async {
     final to = _toController.text.trim();
@@ -37,53 +108,51 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
     setState(() => _isSending = true);
 
     try {
-      // 1) Tạo DocumentReference mới để Firestore sinh ID
+      // Save as sent email
       final docRef = FirebaseFirestore.instance.collection('emails').doc();
-
-      // 2) Lấy id do Firestore sinh ra
-      final emailId = docRef.id;
-
-      // 3) Ghi dữ liệu lên Firestore kèm thêm field "id"
       await docRef.set({
-        'id': emailId, // đính kèm id của document
+        'id': docRef.id,
         'from': from,
         'to': to,
         'subject': subject,
         'body': body,
         'date': FieldValue.serverTimestamp(),
         'time': DateTime.now().toIso8601String(),
-        'isTopItem': false,
         'isRead': true,
         'isStarred': false,
         'isSent': true,
         'icon': 'send',
       });
 
-      // 4) Reset form & thông báo
-      _toController.clear();
-      _subjectController.clear();
-      _bodyController.clear();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Email đã được lưu và gửi")));
+      // Delete draft if exists
+      if (_currentDraftId != null) {
+        await FirebaseFirestore.instance
+            .collection('drafts')
+            .doc(_currentDraftId)
+            .delete();
+      }
 
-      // 5) Quay về trang trước hoặc inbox
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Email đã được gửi thành công")),
+        );
+        Navigator.pop(context);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Lỗi khi gửi: ${e.toString()}")));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Lỗi khi gửi email: $e")));
+      }
     } finally {
-      if (mounted) setState(() => _isSending = false);
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
     }
   }
 
-  @override
-  void dispose() {
-    _toController.dispose();
-    _subjectController.dispose();
-    _bodyController.dispose();
-    super.dispose();
+  void _onTextChanged() {
+    _hasChanges = true;
   }
 
   @override
@@ -92,10 +161,43 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () async {
+            if (_hasChanges) {
+              final shouldSave = await showDialog<bool>(
+                context: context,
+                builder:
+                    (context) => AlertDialog(
+                      title: const Text('Lưu bản nháp?'),
+                      content: const Text(
+                        'Bạn có muốn lưu bản nháp này không?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Không lưu'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Lưu'),
+                        ),
+                      ],
+                    ),
+              );
+
+              if (shouldSave == true) {
+                await _saveDraft();
+              }
+            }
+            if (mounted) Navigator.pop(context);
+          },
         ),
         title: const Text("Soạn Email"),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: () => _saveDraft(),
+            tooltip: 'Lưu bản nháp',
+          ),
           IconButton(
             icon:
                 _isSending
@@ -109,6 +211,7 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
                     )
                     : const Icon(Icons.send),
             onPressed: _isSending ? null : _sendEmail,
+            tooltip: 'Gửi email',
           ),
         ],
       ),
@@ -123,6 +226,7 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
                 prefixIcon: Icon(Icons.email_outlined),
               ),
               keyboardType: TextInputType.emailAddress,
+              onChanged: (_) => _onTextChanged(),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -131,6 +235,7 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
                 labelText: "Chủ đề",
                 prefixIcon: Icon(Icons.subject),
               ),
+              onChanged: (_) => _onTextChanged(),
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -143,6 +248,7 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
                 ),
                 maxLines: null,
                 expands: true,
+                onChanged: (_) => _onTextChanged(),
               ),
             ),
           ],
