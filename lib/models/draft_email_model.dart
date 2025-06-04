@@ -2,7 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Lớp Attachment dùng cho bản nháp
+/// Lớp Attachment (giữ nguyên)
 class Attachment {
   final String name;
   final String url;
@@ -31,13 +31,15 @@ class Attachment {
   }
 }
 
-/// Model cho một bản nháp email
+/// Model cho một bản nháp email, đã bổ sung 'cc' và 'bcc'
 class DraftEmail {
-  final String id; // Nếu mới chưa lưu thì id = ''
+  final String id; // Nếu mới thì id = ''
   final String from;
   final String to;
   final String subject;
   final String body;
+  final List<String> cc; // Mới thêm
+  final List<String> bcc; // Mới thêm
   final DateTime lastModified;
   final bool isAutoSaved;
   final List<Attachment> attachments;
@@ -48,6 +50,8 @@ class DraftEmail {
     required this.to,
     required this.subject,
     required this.body,
+    this.cc = const [],
+    this.bcc = const [],
     required this.lastModified,
     required this.isAutoSaved,
     this.attachments = const [],
@@ -55,10 +59,18 @@ class DraftEmail {
 
   factory DraftEmail.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+
+    // 1) Lấy attachments
     final rawAtts = data['attachments'] as List<dynamic>? ?? [];
     final atts = rawAtts
         .map((e) => Attachment.fromMap(e as Map<String, dynamic>))
         .toList();
+
+    // 2) Lấy cc / bcc (nếu có)
+    final rawCc = data['cc'] as List<dynamic>? ?? [];
+    final rawBcc = data['bcc'] as List<dynamic>? ?? [];
+    final ccList = rawCc.map((e) => e as String).toList();
+    final bccList = rawBcc.map((e) => e as String).toList();
 
     return DraftEmail(
       id: doc.id,
@@ -66,6 +78,8 @@ class DraftEmail {
       to: data['to'] as String,
       subject: data['subject'] as String,
       body: data['body'] as String,
+      cc: ccList,
+      bcc: bccList,
       lastModified: (data['lastModified'] as Timestamp).toDate(),
       isAutoSaved: data['isAutoSaved'] as bool? ?? false,
       attachments: atts,
@@ -78,6 +92,8 @@ class DraftEmail {
       'to': to,
       'subject': subject,
       'body': body,
+      'cc': cc,
+      'bcc': bcc,
       'lastModified': Timestamp.fromDate(lastModified),
       'isAutoSaved': isAutoSaved,
       'attachments': attachments.map((a) => a.toMap()).toList(),

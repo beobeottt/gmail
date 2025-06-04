@@ -1,4 +1,4 @@
-// lib/screens/compose_email_page.dart
+// lib/screens/Compose_Email_Page.dart
 
 import 'dart:async';
 import 'dart:io';
@@ -13,15 +13,20 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../firebase_options.dart';
-
-// Giữ Attachment từ draft_email_model, ẩn Attachment từ email_model để tránh trùng
 import '../models/draft_email_model.dart';
 import '../models/email_model.dart' hide Attachment;
 
 class ComposeEmailPage extends StatefulWidget {
   final DraftEmail? draftEmail;
+  final String? mode; // null, 'reply', 'replyAll', 'forward'
+  final Email? originalEmail;
 
-  const ComposeEmailPage({Key? key, this.draftEmail}) : super(key: key);
+  const ComposeEmailPage({
+    Key? key,
+    this.draftEmail,
+    this.mode,
+    this.originalEmail,
+  }) : super(key: key);
 
   @override
   State<ComposeEmailPage> createState() => _ComposeEmailPageState();
@@ -29,6 +34,8 @@ class ComposeEmailPage extends StatefulWidget {
 
 class _ComposeEmailPageState extends State<ComposeEmailPage> {
   final _toController = TextEditingController();
+  final _ccController = TextEditingController();
+  final _bccController = TextEditingController();
   final _subjectController = TextEditingController();
   final _bodyController = TextEditingController();
 
@@ -45,17 +52,83 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
     super.initState();
     _initializeFirebase();
 
-    // Nếu có bản nháp, tiền điền
     if (widget.draftEmail != null) {
       _toController.text = widget.draftEmail!.to;
+      _ccController.text = widget.draftEmail!.cc.join(', ');
+      _bccController.text = widget.draftEmail!.bcc.join(', ');
       _subjectController.text = widget.draftEmail!.subject;
       _bodyController.text = widget.draftEmail!.body;
       _currentDraftId = widget.draftEmail!.id;
       _attachments.addAll(widget.draftEmail!.attachments);
     }
 
+    if (widget.mode != null && widget.originalEmail != null) {
+      final orig = widget.originalEmail!;
+      final currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? '';
+
+      String prefix;
+      if (widget.mode == 'reply' || widget.mode == 'replyAll') {
+        prefix = 'Re: ';
+      } else if (widget.mode == 'forward') {
+        prefix = 'Fwd: ';
+      } else {
+        prefix = '';
+      }
+      final origSubj = orig.subject;
+      if (origSubj.startsWith('Re: ') && widget.mode == 'reply') {
+        _subjectController.text = origSubj;
+      } else if (origSubj.startsWith('Fwd: ') && widget.mode == 'forward') {
+        _subjectController.text = origSubj;
+      } else {
+        _subjectController.text = '$prefix$origSubj';
+      }
+
+      if (widget.mode == 'reply') {
+        _toController.text = orig.from;
+        _ccController.text = '';
+        _bccController.text = '';
+      } else if (widget.mode == 'replyAll') {
+        final recipients = <String>{};
+        for (var addr in orig.to.split(',')) {
+          final email = addr.trim();
+          if (email.isNotEmpty && email != currentUserEmail) {
+            recipients.add(email);
+          }
+        }
+        for (var email in orig.cc) {
+          if (email.isNotEmpty && email != currentUserEmail) {
+            recipients.add(email);
+          }
+        }
+        if (orig.from.isNotEmpty && orig.from != currentUserEmail) {
+          recipients.add(orig.from);
+        }
+        _toController.text = recipients.join(', ');
+        _ccController.text = '';
+        _bccController.text = '';
+      } else if (widget.mode == 'forward') {
+        _toController.text = '';
+        _ccController.text = '';
+        _bccController.text = '';
+      }
+
+      final buffer = StringBuffer();
+      buffer.writeln();
+      buffer.writeln('__________________________________');
+      buffer.writeln(
+          'On ${orig.date.day}/${orig.date.month}/${orig.date.year} at ${orig.time}, ${orig.from} wrote:');
+      for (var line in orig.body.split('\n')) {
+        buffer.writeln('> $line');
+      }
+      _bodyController.text = buffer.toString();
+
+      _hasChanges = true;
+    }
+
     _setupAutoSave();
     _toController.addListener(_onTextChanged);
+    _ccController.addListener(_onTextChanged);
+    _bccController.addListener(_onTextChanged);
     _subjectController.addListener(_onTextChanged);
     _bodyController.addListener(_onTextChanged);
   }
@@ -77,6 +150,8 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
   void dispose() {
     _autoSaveTimer?.cancel();
     _toController.dispose();
+    _ccController.dispose();
+    _bccController.dispose();
     _subjectController.dispose();
     _bodyController.dispose();
     super.dispose();
@@ -165,7 +240,6 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
       }
 
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('users/${user.uid}/email_attachments/$fileName');
@@ -306,6 +380,16 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
       id: _currentDraftId ?? '',
       from: user!.email!,
       to: _toController.text.trim(),
+      cc: _ccController.text
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList(),
+      bcc: _bccController.text
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList(),
       subject: _subjectController.text.trim(),
       body: _bodyController.text.trim(),
       lastModified: DateTime.now(),
@@ -333,11 +417,28 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
 
   Future<void> _sendEmail() async {
     final to = _toController.text.trim();
+    final ccList = _ccController.text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final bccList = _bccController.text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     final subject = _subjectController.text.trim();
     final body = _bodyController.text.trim();
     final from = FirebaseAuth.instance.currentUser?.email;
 
-    if (to.isEmpty || subject.isEmpty || body.isEmpty) {
+    if (to.isEmpty && ccList.isEmpty && bccList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("Vui lòng nhập ít nhất một địa chỉ email")),
+      );
+      return;
+    }
+    if (subject.isEmpty || body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Vui lòng điền đầy đủ thông tin")),
       );
@@ -358,6 +459,8 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
         'id': docRef.id,
         'from': from,
         'to': to,
+        'cc': ccList,
+        'bcc': bccList,
         'subject': subject,
         'body': body,
         'date': FieldValue.serverTimestamp(),
@@ -472,6 +575,29 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
                 prefixIcon: Icon(Icons.email_outlined),
               ),
               keyboardType: TextInputType.emailAddress,
+              onChanged: (_) => _onTextChanged(),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _ccController,
+              decoration: const InputDecoration(
+                labelText: "Cc",
+                prefixIcon: Icon(Icons.group),
+                hintText: "Nhập email, cách nhau bằng dấu phẩy",
+              ),
+              keyboardType: TextInputType.emailAddress,
+              onChanged: (_) => _onTextChanged(),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _bccController,
+              decoration: const InputDecoration(
+                labelText: "Bcc",
+                prefixIcon: Icon(Icons.lock),
+                hintText: "Nhập email, cách nhau bằng dấu phẩy",
+              ),
+              keyboardType: TextInputType.emailAddress,
+              onChanged: (_) => _onTextChanged(),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -480,6 +606,7 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
                 labelText: "Chủ đề",
                 prefixIcon: Icon(Icons.subject),
               ),
+              onChanged: (_) => _onTextChanged(),
             ),
             const SizedBox(height: 12),
             if (_attachments.isNotEmpty) ...[
@@ -540,6 +667,7 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
                 ),
                 maxLines: null,
                 expands: true,
+                onChanged: (_) => _onTextChanged(),
               ),
             ),
           ],
