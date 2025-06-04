@@ -8,6 +8,7 @@ import 'package:khoates/widgets/email_title.dart';
 import 'Send_mail.dart';
 import 'Starred_Page.dart';
 import 'Home_Page.dart';
+import 'Trash_Page.dart';
 import 'draft_Page.dart';
 
 class GmailPage extends StatefulWidget {
@@ -26,11 +27,11 @@ class _GmailPageState extends State<GmailPage> {
     if (user == null || user.email == null) return [];
     final me = user.email!;
 
-    final snapshot =
-        await FirebaseFirestore.instance
-            .collection('emails')
-            .where('to', isEqualTo: me)
-            .get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('emails')
+        .where('to', isEqualTo: me)
+        .where('isDeleted', isEqualTo: false)
+        .get();
 
     return snapshot.docs.map((doc) => Email.fromDoc(doc)).toList();
   }
@@ -39,24 +40,21 @@ class _GmailPageState extends State<GmailPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user?.photoURL != null) {
       return GestureDetector(
-        onTap:
-            () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const AccountPage()),
-            ),
+        onTap: () => Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AccountPage()),
+        ),
         child: CircleAvatar(backgroundImage: NetworkImage(user!.photoURL!)),
       );
     }
-    final initial =
-        (user?.displayName?.isNotEmpty == true)
-            ? user!.displayName![0].toUpperCase()
-            : '?';
+    final initial = (user?.displayName?.isNotEmpty == true)
+        ? user!.displayName![0].toUpperCase()
+        : '?';
     return GestureDetector(
-      onTap:
-          () => Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const AccountPage()),
-          ),
+      onTap: () => Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AccountPage()),
+      ),
       child: CircleAvatar(child: Text(initial)),
     );
   }
@@ -157,7 +155,18 @@ class _GmailPageState extends State<GmailPage> {
               },
             ),
             const Divider(),
-
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text('Trash'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TrashPage()),
+                );
+              },
+            ),
+            const Divider(),
             // Profile
             ListTile(
               leading: const Icon(Icons.person),
@@ -187,37 +196,35 @@ class _GmailPageState extends State<GmailPage> {
             ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
-              onTap:
-                  () => showDialog(
-                    context: context,
-                    builder:
-                        (ctx) => AlertDialog(
-                          title: const Text('Confirm Logout'),
-                          content: const Text(
-                            'Are you sure you want to log out?',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () async {
-                                await FirebaseAuth.instance.signOut();
-                                Navigator.pop(ctx);
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const HomePage(),
-                                  ),
-                                  (route) => false,
-                                );
-                              },
-                              child: const Text('Logout'),
-                            ),
-                          ],
-                        ),
+              onTap: () => showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Confirm Logout'),
+                  content: const Text(
+                    'Are you sure you want to log out?',
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        await FirebaseAuth.instance.signOut();
+                        Navigator.pop(ctx);
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const HomePage(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text('Logout'),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -294,11 +301,10 @@ class _GmailPageState extends State<GmailPage> {
 
       // Nút Compose
       floatingActionButton: FloatingActionButton(
-        onPressed:
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ComposeEmailPage()),
-            ),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ComposeEmailPage()),
+        ),
         tooltip: 'Compose',
         backgroundColor: Colors.white,
         child: const Icon(Icons.add, color: Colors.red),
@@ -346,7 +352,7 @@ class _GmailPageState extends State<GmailPage> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => EmailDetailPage(email: email)),
+          MaterialPageRoute(builder: (_) => EmailDetailPage(emailId: email.id)),
         ).then((_) {
           setState(() {});
         });

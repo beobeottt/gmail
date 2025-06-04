@@ -28,30 +28,30 @@ class _LoginPageState extends State<LoginPage> {
 
   Future signIn() async {
     // check email, password is null
-    final _email = _emailController.text.trim();
-    final _password = _passwordController.text.trim();
-    if (_email.isEmpty || _password.isEmpty) {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Vui lòng nhập đầy đủ email và mật khẩu.")),
+        const SnackBar(content: Text("Vui lòng nhập đầy đủ email và mật khẩu.")),
       );
       return;
     }
     try {
       // login with real Account from firebase
       await _auth.signInWithEmailAndPassword(
-        email: _email,
-        password: _password,
+        email: email,
+        password: password,
       );
 
       // Chuyển đến HomePage nếu đăng nhập thành công
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => GmailPage()),
+        MaterialPageRoute(builder: (context) => const GmailPage()),
       );
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Login False!!')));
+      ).showSnackBar(const SnackBar(content: Text('Login False!!')));
     }
   }
 
@@ -67,12 +67,12 @@ class _LoginPageState extends State<LoginPage> {
     return Center(
       child: Container(
         width: 350,
-        padding: EdgeInsets.all(25),
+        padding: const EdgeInsets.all(25),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(color: Colors.black),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black26,
               blurRadius: 10,
@@ -83,37 +83,37 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            const Text(
               'Demo',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
             ),
-            SizedBox(height: 10),
-            Text(
+            const SizedBox(height: 10),
+            const Text(
               'Sign In',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Email field
             buildTextField(_emailController, 'Email'),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Password
             buildTextField(_passwordController, 'Password', isPassword: true),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Sign in button
             GestureDetector(
               onTap: signIn,
               child: Container(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.green,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Center(
+                child: const Center(
                   child: Text(
                     'Sign In',
                     style: TextStyle(
@@ -126,17 +126,17 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Register text
             GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => RegisterPhonePage()),
+                  MaterialPageRoute(builder: (context) => const RegisterPhonePage()),
                 );
               },
-              child: Text(
+              child: const Text(
                 'Not a member? Register',
                 style: TextStyle(color: Colors.blue),
               ),
@@ -147,10 +147,10 @@ class _LoginPageState extends State<LoginPage> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
+                  MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
                 );
               },
-              child: Text(
+              child: const Text(
                 'Forgot Password?',
                 style: TextStyle(color: Colors.blue),
               ),

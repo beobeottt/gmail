@@ -61,7 +61,7 @@ class _AccountPageState extends State<AccountPage> {
                 context,
                 MaterialPageRoute(builder: (_) => const GmailPage()),
               ),
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
         ),
         title: const Text('Profile'),
         centerTitle: true,
@@ -134,7 +134,7 @@ class _AccountPageState extends State<AccountPage> {
                 onTap:
                     () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => SettingPage()),
+                      MaterialPageRoute(builder: (context) => const SettingPage()),
                     ),
               ),
               ListTile(
@@ -144,7 +144,7 @@ class _AccountPageState extends State<AccountPage> {
                 onTap:
                     () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => UpdateProfile()),
+                      MaterialPageRoute(builder: (context) => const UpdateProfile()),
                     ),
               ),
               ListTile(

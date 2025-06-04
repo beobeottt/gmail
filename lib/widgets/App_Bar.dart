@@ -10,7 +10,7 @@ class GmailAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Container(
         height: 40,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
         ),
         child: const TextField(

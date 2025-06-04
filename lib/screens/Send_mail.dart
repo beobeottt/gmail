@@ -207,7 +207,7 @@ class _SendMailPageState extends State<SendMailPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Error: \${snapshot.error}'));
+            return const Center(child: Text('Error: \${snapshot.error}'));
           }
           final emails = snapshot.data ?? [];
           if (emails.isEmpty) {

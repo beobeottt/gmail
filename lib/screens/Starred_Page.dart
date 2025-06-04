@@ -34,20 +34,18 @@ class _StarredPageState extends State<StarredPage> {
 
     try {
       // Bước 1: Test chỉ WHERE("to", isEqualTo: email)
-      final onlyToSnap =
-          await FirebaseFirestore.instance
-              .collection('emails')
-              .where('to', isEqualTo: email)
-              .get();
+      final onlyToSnap = await FirebaseFirestore.instance
+          .collection('emails')
+          .where('to', isEqualTo: email)
+          .get();
       debugPrint('  [Debug] only where(to): count = ${onlyToSnap.docs.length}');
 
       // Bước 2: Test thêm WHERE("isStarred", true)
-      final starredSnap =
-          await FirebaseFirestore.instance
-              .collection('emails')
-              .where('to', isEqualTo: email)
-              .where('isStarred', isEqualTo: true)
-              .get();
+      final starredSnap = await FirebaseFirestore.instance
+          .collection('emails')
+          .where('to', isEqualTo: email)
+          .where('isStarred', isEqualTo: true)
+          .get();
       debugPrint(
         '  [Debug] where(to)+where(isStarred): count = ${starredSnap.docs.length}',
       );
@@ -70,33 +68,30 @@ class _StarredPageState extends State<StarredPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null && user.photoURL != null) {
       return GestureDetector(
-        onTap:
-            () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const AccountPage()),
-            ),
+        onTap: () => Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AccountPage()),
+        ),
         child: CircleAvatar(backgroundImage: NetworkImage(user.photoURL!)),
       );
     } else if (user != null &&
         user.displayName != null &&
         user.displayName!.isNotEmpty) {
       return GestureDetector(
-        onTap:
-            () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const AccountPage()),
-            ),
+        onTap: () => Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AccountPage()),
+        ),
         child: CircleAvatar(
           child: Text(user.displayName!.substring(0, 1).toUpperCase()),
         ),
       );
     } else {
       return GestureDetector(
-        onTap:
-            () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const AccountPage()),
-            ),
+        onTap: () => Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AccountPage()),
+        ),
         child: const CircleAvatar(child: Icon(Icons.person_outline)),
       );
     }
@@ -197,37 +192,35 @@ class _StarredPageState extends State<StarredPage> {
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap:
-                  () => showDialog(
-                    context: context,
-                    builder:
-                        (context) => AlertDialog(
-                          title: const Text('Confirm Logout'),
-                          content: const Text(
-                            'Are you sure you want to log out?',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () async {
-                                await FirebaseAuth.instance.signOut();
-                                Navigator.pop(context);
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const HomePage(),
-                                  ),
-                                  (route) => false,
-                                );
-                              },
-                              child: const Text('Logout'),
-                            ),
-                          ],
-                        ),
+              onTap: () => showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Confirm Logout'),
+                  content: const Text(
+                    'Are you sure you want to log out?',
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        await FirebaseAuth.instance.signOut();
+                        Navigator.pop(context);
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const HomePage(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text('Logout'),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -265,19 +258,19 @@ class _StarredPageState extends State<StarredPage> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.menu, color: Colors.black),
-                          onPressed:
-                              () => _scaffoldKey.currentState?.openDrawer(),
+                          onPressed: () =>
+                              _scaffoldKey.currentState?.openDrawer(),
                         ),
                         Expanded(
                           child: Material(
                             elevation: 4,
                             borderRadius: BorderRadius.circular(8),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
                               child: TextField(
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   hintText: 'Search Mail',
                                   border: InputBorder.none,
                                 ),
@@ -342,11 +335,10 @@ class _StarredPageState extends State<StarredPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed:
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ComposeEmailPage()),
-            ),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ComposeEmailPage()),
+        ),
         tooltip: 'Compose',
         backgroundColor: Colors.white,
         child: const Icon(Icons.add, color: Colors.red),
@@ -403,7 +395,7 @@ class _StarredPageState extends State<StarredPage> {
         // push qua Email_title_page
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => EmailDetailPage(email: item)),
+          MaterialPageRoute(builder: (_) => EmailDetailPage(emailId: item.id)),
         );
       },
     );

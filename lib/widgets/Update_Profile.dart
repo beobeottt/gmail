@@ -25,7 +25,7 @@ class _UpdateProfileState extends State<UpdateProfile> {
           padding: const EdgeInsets.all(10),
           child: Column(
             children: [
-              Stack(),
+              const Stack(),
               const SizedBox(height: 50),
               Form(
                 child: Column(
