@@ -56,11 +56,10 @@ class _AccountPageState extends State<AccountPage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          onPressed:
-              () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const GmailPage()),
-              ),
+          onPressed: () => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const GmailPage()),
+          ),
           icon: const Icon(Icons.arrow_back),
         ),
         title: const Text('Profile'),
@@ -92,15 +91,13 @@ class _AccountPageState extends State<AccountPage> {
                   children: [
                     CircleAvatar(
                       radius: 60,
-                      backgroundImage:
-                          _profileImage != null
-                              ? FileImage(_profileImage!)
-                              : (photoUrl != null
-                                      ? NetworkImage(photoUrl)
-                                      : const AssetImage(
-                                        'assets/avatar_placeholder.png',
-                                      ))
-                                  as ImageProvider,
+                      backgroundImage: _profileImage != null
+                          ? FileImage(_profileImage!)
+                          : (photoUrl != null
+                              ? NetworkImage(photoUrl)
+                              : const AssetImage(
+                                  'assets/avatar_placeholder.png',
+                                )) as ImageProvider,
                     ),
                     Positioned(
                       bottom: 0,
@@ -131,57 +128,54 @@ class _AccountPageState extends State<AccountPage> {
                 leading: const Icon(Icons.settings),
                 title: const Text('Settings'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const SettingPage()),
-                    ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingPage()),
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.person),
                 title: const Text('Update Profile'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const UpdateProfile()),
-                    ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const UpdateProfile()),
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.logout),
                 title: const Text('Logout'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap:
-                    () => showDialog(
-                      context: context,
-                      builder:
-                          (context) => AlertDialog(
-                            title: const Text('Confirm Logout'),
-                            content: const Text(
-                              'Are you sure you want to log out?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  await FirebaseAuth.instance.signOut();
-                                  Navigator.pop(context);
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const HomePage(),
-                                    ),
-                                    (route) => false,
-                                  );
-                                },
-                                child: const Text('Logout'),
-                              ),
-                            ],
-                          ),
+                onTap: () => showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Confirm Logout'),
+                    content: const Text(
+                      'Are you sure you want to log out?',
                     ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          await FirebaseAuth.instance.signOut();
+                          Navigator.pop(context);
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HomePage(),
+                            ),
+                            (route) => false,
+                          );
+                        },
+                        child: const Text('Logout'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           );

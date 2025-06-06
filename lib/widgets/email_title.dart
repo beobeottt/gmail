@@ -1,10 +1,6 @@
-// lib/screens/email_detail_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 import '../models/email_model.dart';
 import '../screens/Compose_Email_Page.dart';
 import '../screens/Trash_Page.dart';
@@ -29,7 +25,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
             .collection('emails')
             .doc(email.id)
             .update({'isRead': true});
-        setState(() {}); // Kích rebuild để FutureBuilder refetch
+        setState(() {}); // trigger FutureBuilder reload once update xong
       } catch (e) {
         debugPrint('Error marking as read: $e');
       }
@@ -44,43 +40,43 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
           .collection('emails')
           .doc(email.id)
           .update({'isStarred': !email.isStarred});
-      setState(() => _isUpdatingStar = false);
     } catch (e) {
-      setState(() => _isUpdatingStar = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi cập nhật star: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi cập nhật Star: $e')),
+      );
+    } finally {
+      // Dù thành công hay lỗi, tắt loading và reload lại FutureBuilder
+      setState(() {
+        _isUpdatingStar = false;
+      });
+      setState(() {});
     }
   }
 
-  /// Di chuyển email vào Thùng rác (isDeleted = true) và điều hướng sang TrashPage
+  /// Di chuyển email vào Thùng Rác (isDeleted = true) và điều hướng sang trang TrashPage
   Future<void> _moveToTrash(Email email) async {
     try {
       await FirebaseFirestore.instance
           .collection('emails')
           .doc(email.id)
           .update({'isDeleted': true});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email đã được chuyển vào Thùng rác')),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const TrashPage()),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email đã được chuyển vào Thùng Rác')),
+      );
+      if (!mounted) return;
+      // Sau khi update xong, pushReplacement sang TrashPage
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const TrashPage()),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi di chuyển: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi di chuyển: $e')),
+      );
     }
   }
 
-  /// Hiển thị danh sách attachments và cho phép mở đường dẫn
+  /// Hiển thị danh sách attachments và cho phép mở đường dẫn tương ứng
   void _downloadAttachment(Email email) {
     if (email.attachments.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -104,13 +100,9 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
               if (await canLaunchUrl(uri)) {
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
               } else {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Không thể mở đường dẫn ${att.url}'),
-                    ),
-                  );
-                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Không thể mở đường dẫn ${att.url}')),
+                );
               }
             },
           );
@@ -119,7 +111,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
     );
   }
 
-  /// Chuyển sang màn soạn email với chế độ ‘reply’
+  /// Chuyển sang màn soạn email với chế độ 'reply'
   void _onReply(Email email) {
     Navigator.push(
       context,
@@ -132,7 +124,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
     );
   }
 
-  /// Chuyển sang màn soạn email với chế độ ‘replyAll’
+  /// Chuyển sang màn soạn email với chế độ 'replyAll'
   void _onReplyAll(Email email) {
     Navigator.push(
       context,
@@ -145,7 +137,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
     );
   }
 
-  /// Chuyển sang màn soạn email với chế độ ‘forward’
+  /// Chuyển sang màn soạn email với chế độ 'forward'
   void _onForward(Email email) {
     Navigator.push(
       context,
@@ -160,41 +152,76 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Dùng FutureBuilder để lấy document `/emails/{emailId}`
     return FutureBuilder<DocumentSnapshot>(
       future: FirebaseFirestore.instance
           .collection('emails')
           .doc(widget.emailId)
           .get(),
       builder: (context, snapshot) {
-        // Đang tải dữ liệu
+        // === 1) Nếu đang chờ dữ liệu ===
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Chi tiết Email'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            body: const Center(child: CircularProgressIndicator()),
           );
         }
 
-        // Nếu không có document (hoặc doc không tồn tại)
+        // === 2) Nếu Firestore trả về lỗi (permission, network, v.v…) ===
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Chi tiết Email'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            body: Center(
+              child: Text(
+                'Đã có lỗi xảy ra:\n${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          );
+        }
+
+        // === 3) Nếu document không tồn tại hoặc dữ liệu null ===
         if (!snapshot.hasData ||
             snapshot.data == null ||
             !snapshot.data!.exists) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Chi tiết Email')),
+            appBar: AppBar(
+              title: const Text('Chi tiết Email'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
             body: const Center(child: Text('Không tìm thấy email này')),
           );
         }
 
-        // Đã có data, map sang Email
+        // === 4) Document tồn tại → parse thành Email ===
         final email = Email.fromDoc(snapshot.data!);
 
-        // Nếu email chưa đọc, đánh dấu đọc ngay sau khi UI build xong
+        // Nếu email chưa đọc → đánh dấu isRead = true
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _markAsReadIfNeeded(email);
         });
 
-        // Định dạng ngày/tháng/năm từ email.date
+        // Format ngày tháng từ email.date
         final formattedDate =
             '${email.date.day}/${email.date.month}/${email.date.year}';
 
+        // === 5) Trả về Scaffold đầy đủ với AppBar + Body khi đã có email ===
         return Scaffold(
           appBar: AppBar(
             title: const Text('Chi tiết Email'),
@@ -203,20 +230,18 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
               onPressed: () => Navigator.pop(context),
             ),
             actions: [
-              // Nút Download attachment
+              // Nút Download Attachment
               IconButton(
                 icon: const Icon(Icons.download_rounded),
                 tooltip: 'Download Attachment',
                 onPressed: () => _downloadAttachment(email),
               ),
-
               // Nút Move to Trash
               IconButton(
                 icon: const Icon(Icons.delete_outline),
                 tooltip: 'Move to Trash',
                 onPressed: () => _moveToTrash(email),
               ),
-
               // Nút Star / Unstar
               IconButton(
                 icon: _isUpdatingStar
@@ -239,16 +264,14 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
           ),
           body: Column(
             children: [
-              // =============================================
-              // PHẦN NỘI DUNG CHÍNH (scrollable nếu quá dài)
-              // =============================================
+              // ========= Phần nội dung chính =========
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ----- Subject -----
+                      // --- Subject ---
                       Text(
                         email.subject,
                         style: const TextStyle(
@@ -258,7 +281,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                       ),
                       const SizedBox(height: 12),
 
-                      // ----- From -----
+                      // --- From ---
                       Row(
                         children: [
                           const Text(
@@ -278,7 +301,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                       ),
                       const SizedBox(height: 4),
 
-                      // ----- To -----
+                      // --- To ---
                       Row(
                         children: [
                           const Text(
@@ -298,7 +321,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                       ),
                       const SizedBox(height: 4),
 
-                      // ----- Cc (nếu có) -----
+                      // --- Cc (nếu có) ---
                       if (email.cc.isNotEmpty) ...[
                         Row(
                           children: [
@@ -312,7 +335,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                         const SizedBox(height: 4),
                       ],
 
-                      // ----- Bcc (nếu có) -----
+                      // --- Bcc (nếu có) ---
                       if (email.bcc.isNotEmpty) ...[
                         Row(
                           children: [
@@ -326,7 +349,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                         const SizedBox(height: 4),
                       ],
 
-                      // ----- Date & Time -----
+                      // --- Date & Time ---
                       Row(
                         children: [
                           const Text(
@@ -340,7 +363,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                       const Divider(),
                       const SizedBox(height: 20),
 
-                      // ----- Attachments (nếu có) -----
+                      // --- Attachments (nếu có) ---
                       if (email.attachments.isNotEmpty) ...[
                         const Text(
                           'File đính kèm:',
@@ -363,9 +386,8 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                                   width: 100,
                                   height: 100,
                                   decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.grey.shade400,
-                                    ),
+                                    border:
+                                        Border.all(color: Colors.grey.shade400),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: ClipRRect(
@@ -376,9 +398,8 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                                       errorBuilder:
                                           (context, error, stackTrace) {
                                         return const Center(
-                                          child: Icon(
-                                            Icons.image_not_supported,
-                                          ),
+                                          child:
+                                              Icon(Icons.image_not_supported),
                                         );
                                       },
                                     ),
@@ -393,7 +414,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                         const SizedBox(height: 20),
                       ],
 
-                      // ----- Body -----
+                      // --- Body ---
                       Text(
                         email.body,
                         style: TextStyle(
@@ -408,17 +429,14 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
 
               const SizedBox(height: 8),
 
-              // ==================================================
-              // PHẦN CUỐI: Ba nút “Reply / Reply All / Forward”
-              // Mỗi nút có viền border riêng
-              // ==================================================
+              // ========= Ba nút “Reply / Reply All / Forward” =========
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // ----- Reply -----
+                    // --- Reply ---
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade400),
@@ -435,7 +453,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                       ),
                     ),
 
-                    // ----- Reply All -----
+                    // --- Reply All ---
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade400),
@@ -452,7 +470,7 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                       ),
                     ),
 
-                    // ----- Forward -----
+                    // --- Forward ---
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade400),
@@ -471,7 +489,6 @@ class _EmailDetailPageState extends State<EmailDetailPage> {
                   ],
                 ),
               ),
-              // ==================================================
             ],
           ),
         );

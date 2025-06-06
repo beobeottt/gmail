@@ -36,6 +36,18 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>App needs access to local network for debugging</string>
+	<!-- Cho phép truy cập Camera -->
+	<key>NSCameraUsageDescription</key>
+	<string>Ứng dụng cần truy cập camera để chụp ảnh đính kèm</string>
+
+	<!-- Cho phép truy cập Photo Library (Gallery) -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ứng dụng cần truy cập Thư viện ảnh để đính kèm hình</string>
+
+	<!-- Nếu bạn tải video/ảnh lên thì cũng nên khai thêm: -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ứng dụng cần lưu file ảnh vào Thư viện</string>
+
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

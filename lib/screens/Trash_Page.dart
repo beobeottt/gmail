@@ -3,7 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/email_model.dart';
-import 'email_detail_page.dart';
+import '../widgets/email_title.dart';
+//import 'email_detail_page.dart';
 
 class TrashPage extends StatelessWidget {
   const TrashPage({Key? key}) : super(key: key);

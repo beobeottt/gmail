@@ -92,15 +92,14 @@ class _RegisterPhonePageState extends State<RegisterPhonePage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) => VerifyOtpPage(
-                name: _nameController.text.trim(),
-                dob: _dobController.text.trim(),
-                email: _emailController.text.trim(),
-                password: _passwordController.text.trim(),
-                phone: phone,
-                demoOtp: _demoOtp!,
-              ),
+          builder: (context) => VerifyOtpPage(
+            name: _nameController.text.trim(),
+            dob: _dobController.text.trim(),
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+            phone: phone,
+            demoOtp: _demoOtp!,
+          ),
         ),
       );
     }
@@ -190,10 +189,9 @@ class _RegisterPhonePageState extends State<RegisterPhonePage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child:
-                  _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Đăng ký', style: TextStyle(fontSize: 16)),
+              child: _isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Đăng ký', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),

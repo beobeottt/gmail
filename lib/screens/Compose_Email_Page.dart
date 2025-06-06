@@ -465,7 +465,7 @@ class _ComposeEmailPageState extends State<ComposeEmailPage> {
         'body': body,
         'date': FieldValue.serverTimestamp(),
         'time': DateTime.now().toIso8601String(),
-        'isRead': true,
+        'isRead': false,
         'isStarred': false,
         'isDeleted': false,
         'attachments': _attachments.map((a) => a.toMap()).toList(),
