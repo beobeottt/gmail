@@ -6,10 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Nếu bạn muốn điều hướng về HomePage sau khi đăng ký xong:
 import 'Home_Page.dart';
-
-// Nếu bạn muốn dùng Pinput thay cho TextField, hãy cài thêm package pinput
-// và mở comment đoạn mã bên dưới:
-// import 'package:pinput/pinput.dart';
+import 'login_page.dart';
 
 class VerifyOtpPage extends StatefulWidget {
   final String name;
@@ -44,10 +41,9 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   }
 
   void _showSnack(String message) {
-    // Hiển thị Snackbar ngắn gọn
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _verifyOtp() async {
@@ -68,24 +64,28 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
       return;
     }
 
-    // Bắt đầu quá trình verify + sign-up
     setState(() {
       _isVerifying = true;
     });
 
     try {
+      debugPrint('≫ Entered OTP: $enteredOtp, Demo OTP: ${widget.demoOtp}');
+      debugPrint('≫ Creating user with email=${widget.email}');
+
       // 1) Tạo account bằng email/password
-      UserCredential cred = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-            email: widget.email,
-            password: widget.password,
-          );
+      UserCredential cred =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: widget.email,
+        password: widget.password,
+      );
       User firebaseUser = cred.user!;
+      debugPrint('≫ Firebase user created, UID=${firebaseUser.uid}');
 
-      // 2) Cập nhật displayName (nếu cần)
+      // 2) Cập nhật displayName
       await firebaseUser.updateDisplayName(widget.name);
+      debugPrint('≫ Updated displayName to ${widget.name}');
 
-      // 3) Tạo document profile trong Firestore với ID = uid
+      // 3) Tạo document profile trong Firestore
       final uid = firebaseUser.uid;
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'uid': uid,
@@ -93,17 +93,20 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
         'dob': widget.dob,
         'email': widget.email,
         'phone': widget.phone,
-        'photoURL': '', // Có thể cập nhật sau
+        'photoURL': '',
         'createdAt': FieldValue.serverTimestamp(),
       });
+      debugPrint('≫ Firestore profile document created for UID=$uid');
 
-      // 4) Điều hướng sang HomePage (hoặc GmailPage nếu bạn muốn)
+      // 4) Điều hướng về HomePage
       if (!mounted) return;
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+      debugPrint('≫ Điều hướng về HomePage');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+      debugPrint('≫ Đã gọi pushAndRemoveUntil tới HomePage');
     } on FirebaseAuthException catch (e) {
-      // Bắt các lỗi từ FirebaseAuth (email đã tồn tại, mật khẩu yếu, v.v.)
       String message = '';
       switch (e.code) {
         case 'email-already-in-use':
@@ -119,8 +122,10 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
           message = e.message ?? 'Lỗi đăng ký: ${e.code}';
       }
       _showSnack(message);
+      debugPrint('≫ FirebaseAuthException: ${e.code} / ${e.message}');
     } catch (e) {
       _showSnack('Đã có lỗi xảy ra: ${e.toString()}');
+      debugPrint('≫ Exception in _verifyOtp: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -146,19 +151,6 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 20),
-
-            // Nếu bạn muốn dùng Pinput thay cho TextField, bỏ comment đoạn dưới
-            /*
-            Center(
-              child: Pinput(
-                length: 6,
-                controller: _otpController,
-                onCompleted: (pin) => _verifyOtp(),
-              ),
-            ),
-            */
-
-            // Dùng TextField đơn giản để nhập OTP
             TextField(
               controller: _otpController,
               keyboardType: TextInputType.number,
@@ -169,7 +161,6 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: _isVerifying ? null : _verifyOtp,
@@ -179,20 +170,19 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child:
-                  _isVerifying
-                      ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      )
-                      : const Text(
-                        'Xác nhận OTP',
-                        style: TextStyle(fontSize: 16),
+              child: _isVerifying
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
                       ),
+                    )
+                  : const Text(
+                      'Xác nhận OTP',
+                      style: TextStyle(fontSize: 16),
+                    ),
             ),
           ],
         ),
