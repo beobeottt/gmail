@@ -7,13 +7,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../models/email_model.dart';
-import '../widgets/email_title.dart';
-import 'Compose_Email_Page.dart';
 import 'Account_Page.dart';
-import 'Trash_Page.dart';
-import 'Starred_Page.dart';
-import 'Send_mail.dart';
+import 'Compose_Email_Page.dart';
+import 'Email_Detail_Page.dart';
 import 'Home_Page.dart';
+import 'Send_mail.dart';
+import 'Starred_Page.dart';
+import 'Trash_Page.dart';
 import 'draft_Page.dart';
 
 class GmailPage extends StatefulWidget {
@@ -24,9 +24,15 @@ class GmailPage extends StatefulWidget {
 }
 
 class _GmailPageState extends State<GmailPage> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<List<Email>> _emailsFuture;
+
+  // show/hide the in-line search field
+  bool _showSearch = false;
+  final _searchController = TextEditingController();
   String _searchQuery = '';
+
+  // loading / error state
   bool _isLoading = false;
   bool _hasError = false;
   String _errorMessage = '';
@@ -35,9 +41,20 @@ class _GmailPageState extends State<GmailPage> {
   void initState() {
     super.initState();
     _loadEmails();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.trim().toLowerCase();
+      });
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showUnreadCountNotification();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _loadEmails() {
@@ -89,33 +106,31 @@ class _GmailPageState extends State<GmailPage> {
         .where('isDeleted', isEqualTo: false)
         .orderBy('date', descending: true)
         .get();
-
     return snap.docs.map((doc) => Email.fromDoc(doc)).toList();
   }
 
   Future<void> _openEmailDetail(Email email) async {
     setState(() => _isLoading = true);
     try {
-      // đánh dấu đã đọc
+      // mark as read
       await FirebaseFirestore.instance
           .collection('emails')
           .doc(email.id)
           .update({'isRead': true});
 
-      // rồi mới push
+      // then navigate
       await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => EmailDetailPage(emailId: email.id),
         ),
       );
-      // khi quay về, reload lại list
+      // and refresh on return
       setState(() {});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi mở email: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Lỗi khi mở email: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -145,16 +160,34 @@ class _GmailPageState extends State<GmailPage> {
     );
   }
 
+  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) =>
+      ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: onTap,
+      );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: const Text('Gmail'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context)),
+        title: const Text('Gmail'),
+        actions: [
+          IconButton(
+            icon: Icon(_showSearch ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                _showSearch = !_showSearch;
+                if (!_showSearch) _searchController.clear();
+              });
+            },
+          ),
+        ],
       ),
       drawer: Drawer(
         child: ListView(
@@ -243,30 +276,42 @@ class _GmailPageState extends State<GmailPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // —───────── Search Bar ─────────—
+            // — top row: menu button / optional search / avatar —
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search Mail',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.grey[200],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                onChanged: (v) =>
-                    setState(() => _searchQuery = v.trim().toLowerCase()),
+              child: Row(
+                children: [
+                  IconButton(
+                      icon: const Icon(Icons.menu),
+                      onPressed: () => _scaffoldKey.currentState?.openDrawer()),
+                  const SizedBox(width: 8),
+                  if (_showSearch) ...[
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search Mail',
+                          filled: true,
+                          fillColor: Colors.grey[200],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  _buildProfileAvatar(),
+                ],
               ),
             ),
 
-            // —───────── Email List ─────────—
+            // — email list —
             Expanded(
               child: FutureBuilder<List<Email>>(
                 future: _emailsFuture,
-                builder: (context, snap) {
+                builder: (ctx, snap) {
                   if (snap.connectionState == ConnectionState.waiting ||
                       _isLoading) {
                     return const Center(child: CircularProgressIndicator());
@@ -288,13 +333,16 @@ class _GmailPageState extends State<GmailPage> {
                     );
                   }
 
-                  // lọc theo search query
+                  // filter by search query
                   final all = snap.data ?? [];
-                  final emails = all.where((e) {
-                    final s = e.subject.toLowerCase();
-                    final f = e.from.toLowerCase();
-                    return s.contains(_searchQuery) || f.contains(_searchQuery);
-                  }).toList();
+                  final emails = _searchQuery.isEmpty
+                      ? all
+                      : all.where((e) {
+                          return e.subject
+                                  .toLowerCase()
+                                  .contains(_searchQuery) ||
+                              e.from.toLowerCase().contains(_searchQuery);
+                        }).toList();
 
                   if (emails.isEmpty) {
                     return const Center(child: Text('Không có email.'));
@@ -311,9 +359,11 @@ class _GmailPageState extends State<GmailPage> {
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           leading: CircleAvatar(
-                            child: Text(email.from.isNotEmpty
-                                ? email.from[0].toUpperCase()
-                                : '?'),
+                            child: Text(
+                              email.from.isNotEmpty
+                                  ? email.from[0].toUpperCase()
+                                  : '?',
+                            ),
                           ),
                           title: Text(
                             email.subject,
@@ -342,16 +392,18 @@ class _GmailPageState extends State<GmailPage> {
                                       .collection('emails')
                                       .doc(email.id)
                                       .update({'isStarred': !email.isStarred});
-                                  setState(() {});
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(email.isStarred
-                                          ? 'Đã bỏ Star'
-                                          : 'Đã đánh dấu Star'),
-                                      duration:
-                                          const Duration(milliseconds: 800),
-                                    ),
-                                  );
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(email.isStarred
+                                            ? 'Đã bỏ Star'
+                                            : 'Đã đánh dấu Star'),
+                                        duration:
+                                            const Duration(milliseconds: 800),
+                                      ),
+                                    );
+                                    _loadEmails();
+                                  }
                                 },
                               ),
                               IconButton(
@@ -362,12 +414,14 @@ class _GmailPageState extends State<GmailPage> {
                                       .collection('emails')
                                       .doc(email.id)
                                       .update({'isDeleted': true});
-                                  setState(() {});
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text(
-                                            'Đã chuyển email vào Thùng Rác')),
-                                  );
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Đã chuyển email vào Thùng Rác')),
+                                    );
+                                    _loadEmails();
+                                  }
                                 },
                               ),
                             ],
@@ -384,23 +438,14 @@ class _GmailPageState extends State<GmailPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        tooltip: 'Compose',
+        backgroundColor: Colors.white,
+        child: const Icon(Icons.add, color: Colors.red),
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ComposeEmailPage()),
         ),
-        tooltip: 'Compose',
-        backgroundColor: Colors.white,
-        child: const Icon(Icons.add, color: Colors.red),
       ),
-    );
-  }
-
-  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      onTap: onTap,
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
     );
   }
 }
