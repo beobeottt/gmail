@@ -1,18 +1,19 @@
 // lib/screens/gmail_page.dart
 
-import 'package:flutter/material.dart';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:io';
+import 'package:flutter/material.dart';
+
 import '../models/email_model.dart';
 import '../widgets/email_title.dart';
 import 'Compose_Email_Page.dart';
 import 'Account_Page.dart';
-//import 'Email_Detail_Page.dart';
-import 'Send_mail.dart';
-import 'Starred_Page.dart';
-import 'Home_Page.dart';
 import 'Trash_Page.dart';
+import 'Starred_Page.dart';
+import 'Send_mail.dart';
+import 'Home_Page.dart';
 import 'draft_Page.dart';
 
 class GmailPage extends StatefulWidget {
@@ -24,35 +25,43 @@ class GmailPage extends StatefulWidget {
 
 class _GmailPageState extends State<GmailPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late Future<List<Email>> _emailsFuture;
+  String _searchQuery = '';
   bool _isLoading = false;
   bool _hasError = false;
   String _errorMessage = '';
-  List<Email>? _emails;
-  Future<List<Email>>? _emailsFuture;
 
   @override
   void initState() {
     super.initState();
-    _emailsFuture = fetchEmails();
+    _loadEmails();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showUnreadCountNotification();
     });
   }
 
+  void _loadEmails() {
+    setState(() {
+      _hasError = false;
+      _errorMessage = '';
+      _emailsFuture = fetchEmails();
+    });
+  }
+
   Future<void> _showUnreadCountNotification() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || user.email == null) return;
-    final snapshot = await FirebaseFirestore.instance
+    if (user?.email == null) return;
+    final snap = await FirebaseFirestore.instance
         .collection('emails')
-        .where('to', isEqualTo: user.email!)
+        .where('to', isEqualTo: user!.email!)
         .where('isDeleted', isEqualTo: false)
         .where('isRead', isEqualTo: false)
         .get();
-    final unreadCount = snapshot.docs.length;
-    if (unreadCount > 0 && mounted) {
+    final cnt = snap.docs.length;
+    if (cnt > 0 && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Bạn có $unreadCount email chưa đọc'),
+          content: Text('Bạn có $cnt email chưa đọc'),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -61,90 +70,47 @@ class _GmailPageState extends State<GmailPage> {
 
   Future<bool> _checkConnection() async {
     try {
-      final result = await InternetAddress.lookup('google.com');
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } on SocketException catch (_) {
+      final res = await InternetAddress.lookup('google.com');
+      return res.isNotEmpty && res[0].rawAddress.isNotEmpty;
+    } on SocketException {
       return false;
     }
   }
 
   Future<List<Email>> fetchEmails() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null || user.email == null) {
-        debugPrint('User not logged in');
-        return [];
-      }
-
-      // Kiểm tra kết nối
-      final hasConnection = await _checkConnection();
-      if (!hasConnection) {
-        throw Exception('Không có kết nối internet');
-      }
-
-      final snapshot = await FirebaseFirestore.instance
-          .collection('emails')
-          .where('to', isEqualTo: user.email!)
-          .where('isDeleted', isEqualTo: false)
-          .orderBy('date', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) {
-            try {
-              return Email.fromDoc(doc);
-            } catch (e) {
-              debugPrint('Error parsing email ${doc.id}: $e');
-              return null;
-            }
-          })
-          .whereType<Email>()
-          .toList();
-    } catch (e) {
-      debugPrint('Error fetching emails: $e');
-      throw e;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.email == null) return [];
+    if (!await _checkConnection()) {
+      throw Exception('Không có kết nối internet');
     }
-  }
+    final snap = await FirebaseFirestore.instance
+        .collection('emails')
+        .where('to', isEqualTo: user!.email!)
+        .where('isDeleted', isEqualTo: false)
+        .orderBy('date', descending: true)
+        .get();
 
-  void _refreshEmails() {
-    setState(() {
-      _emailsFuture = fetchEmails();
-      _hasError = false;
-      _errorMessage = '';
-    });
+    return snap.docs.map((doc) => Email.fromDoc(doc)).toList();
   }
 
   Future<void> _openEmailDetail(Email email) async {
+    setState(() => _isLoading = true);
     try {
-      setState(() => _isLoading = true);
-
-
+      // đánh dấu đã đọc
       await FirebaseFirestore.instance
           .collection('emails')
           .doc(email.id)
           .update({'isRead': true});
 
-      // Kiểm tra email còn tồn tại không
-      final doc = await FirebaseFirestore.instance
-          .collection('emails')
-          .doc(email.id)
-          .get();
-
-      if (!doc.exists) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Email không tồn tại hoặc đã bị xóa')),
-          );
-        }
-        return;
-      }
-
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => EmailDetailPage(emailId: email.id)),
-        ).then((_) => setState(() {}));
-      }
+      // rồi mới push
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EmailDetailPage(emailId: email.id),
+        ),
+      );
+      // khi quay về, reload lại list
+      setState(() {});
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -152,9 +118,7 @@ class _GmailPageState extends State<GmailPage> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -169,7 +133,7 @@ class _GmailPageState extends State<GmailPage> {
         child: CircleAvatar(backgroundImage: NetworkImage(user!.photoURL!)),
       );
     }
-    final initial = (user?.displayName?.isNotEmpty == true)
+    final initial = user?.displayName?.isNotEmpty == true
         ? user!.displayName![0].toUpperCase()
         : '?';
     return GestureDetector(
@@ -186,11 +150,11 @@ class _GmailPageState extends State<GmailPage> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
+        title: const Text('Gmail'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Gmail'),
       ),
       drawer: Drawer(
         child: ListView(
@@ -198,213 +162,146 @@ class _GmailPageState extends State<GmailPage> {
           children: [
             DrawerHeader(
               decoration: BoxDecoration(color: Theme.of(context).primaryColor),
-              child: const Text(
-                'Menu',
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
+              child: const Text('Menu',
+                  style: TextStyle(color: Colors.white, fontSize: 24)),
             ),
-            ListTile(
-              leading: const Icon(Icons.inbox),
-              title: const Text('Inbox'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const GmailPage()),
-                );
-              },
-            ),
+            _buildDrawerItem(Icons.inbox, 'Inbox', () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (_) => const GmailPage()));
+            }),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.star),
-              title: const Text('Starred'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const StarredPage()),
-                );
-              },
-            ),
+            _buildDrawerItem(Icons.star, 'Starred', () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (_) => const StarredPage()));
+            }),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.send),
-              title: const Text('Sent'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SendMailPage()),
-                );
-              },
-            ),
+            _buildDrawerItem(Icons.send, 'Sent', () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (_) => const SendMailPage()));
+            }),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.drafts),
-              title: const Text('Drafts'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DraftPage()),
-                );
-              },
-            ),
+            _buildDrawerItem(Icons.drafts, 'Drafts', () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (_) => const DraftPage()));
+            }),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.add),
-              title: const Text('Compose Email'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ComposeEmailPage()),
-                );
-              },
-            ),
+            _buildDrawerItem(Icons.add, 'Compose Email', () {
+              Navigator.pop(context);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ComposeEmailPage()));
+            }),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: const Text('Trash'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const TrashPage()),
-                );
-              },
-            ),
+            _buildDrawerItem(Icons.delete_outline, 'Trash', () {
+              Navigator.pop(context);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const TrashPage()));
+            }),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Profile'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AccountPage()),
-                );
-              },
-            ),
+            _buildDrawerItem(Icons.person, 'Profile', () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (_) => const AccountPage()));
+            }),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.refresh),
-              title: const Text('Refresh'),
-              onTap: () {
-                Navigator.pop(context);
-                setState(() {});
-              },
-            ),
+            _buildDrawerItem(Icons.refresh, 'Refresh', () {
+              Navigator.pop(context);
+              _loadEmails();
+            }),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () => showDialog(
+            _buildDrawerItem(Icons.logout, 'Logout', () {
+              showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Confirm Logout'),
-                  content: const Text(
-                    'Are you sure you want to log out?',
-                  ),
+                  content: const Text('Are you sure you want to log out?'),
                   actions: [
                     TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel'),
-                    ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Cancel')),
                     TextButton(
-                      onPressed: () async {
-                        await FirebaseAuth.instance.signOut();
-                        Navigator.pop(ctx);
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const HomePage(),
-                          ),
-                          (route) => false,
-                        );
-                      },
-                      child: const Text('Logout'),
-                    ),
+                        onPressed: () async {
+                          await FirebaseAuth.instance.signOut();
+                          Navigator.pop(ctx);
+                          Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const HomePage()),
+                              (_) => false);
+                        },
+                        child: const Text('Logout')),
                   ],
                 ),
-              ),
-            ),
+              );
+            }),
           ],
         ),
       ),
       body: SafeArea(
         child: Column(
           children: [
+            // —───────── Search Bar ─────────—
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.menu, color: Colors.black),
-                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search Mail',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[200],
-                        hintText: 'Search Mail',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildProfileAvatar(),
-                ],
+                ),
+                onChanged: (v) =>
+                    setState(() => _searchQuery = v.trim().toLowerCase()),
               ),
             ),
+
+            // —───────── Email List ─────────—
             Expanded(
               child: FutureBuilder<List<Email>>(
                 future: _emailsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting ||
+                      _isLoading) {
                     return const Center(child: CircularProgressIndicator());
                   }
-
-                  if (snapshot.hasError) {
+                  if (snap.hasError || _hasError) {
+                    final msg = snap.error?.toString() ?? _errorMessage;
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            'Có lỗi xảy ra: ${snapshot.error}',
-                            style: const TextStyle(color: Colors.red),
-                            textAlign: TextAlign.center,
-                          ),
+                          Text('Có lỗi xảy ra: $msg',
+                              style: const TextStyle(color: Colors.red)),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                            onPressed: _refreshEmails,
-                            child: const Text('Thử lại'),
-                          ),
+                              onPressed: _loadEmails,
+                              child: const Text('Thử lại')),
                         ],
                       ),
                     );
                   }
 
-                  final emails = snapshot.data ?? [];
+                  // lọc theo search query
+                  final all = snap.data ?? [];
+                  final emails = all.where((e) {
+                    final s = e.subject.toLowerCase();
+                    final f = e.from.toLowerCase();
+                    return s.contains(_searchQuery) || f.contains(_searchQuery);
+                  }).toList();
+
                   if (emails.isEmpty) {
-                    return const Center(
-                      child: Text('Không có email nào.'),
-                    );
+                    return const Center(child: Text('Không có email.'));
                   }
 
                   return RefreshIndicator(
-                    onRefresh: () async {
-                      _refreshEmails();
-                    },
+                    onRefresh: () async => _loadEmails(),
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       itemCount: emails.length,
@@ -441,76 +338,37 @@ class _GmailPageState extends State<GmailPage> {
                                       : Colors.grey,
                                 ),
                                 onPressed: () async {
-                                  try {
-                                    // Cập nhật Firestore trước
-                                    await FirebaseFirestore.instance
-                                        .collection('emails')
-                                        .doc(email.id)
-                                        .update(
-                                            {'isStarred': !email.isStarred});
-
-                                    // Refresh lại danh sách email để cập nhật UI
-                                    _refreshEmails();
-
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(!email.isStarred
-                                              ? 'Đã đánh dấu Star'
-                                              : 'Đã bỏ Star'),
-                                          duration:
-                                              const Duration(milliseconds: 800),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                            content: Text(
-                                                'Lỗi khi cập nhật Starred: $e')),
-                                      );
-                                    }
-                                  }
+                                  await FirebaseFirestore.instance
+                                      .collection('emails')
+                                      .doc(email.id)
+                                      .update({'isStarred': !email.isStarred});
+                                  setState(() {});
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(email.isStarred
+                                          ? 'Đã bỏ Star'
+                                          : 'Đã đánh dấu Star'),
+                                      duration:
+                                          const Duration(milliseconds: 800),
+                                    ),
+                                  );
                                 },
-                                tooltip: email.isStarred ? 'Bỏ Star' : 'Star',
                               ),
                               IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.redAccent,
-                                ),
+                                icon: const Icon(Icons.delete_outline,
+                                    color: Colors.redAccent),
                                 onPressed: () async {
-                                  try {
-                                    await FirebaseFirestore.instance
-                                        .collection('emails')
-                                        .doc(email.id)
-                                        .update({'isDeleted': true});
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
+                                  await FirebaseFirestore.instance
+                                      .collection('emails')
+                                      .doc(email.id)
+                                      .update({'isDeleted': true});
+                                  setState(() {});
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
                                         content: Text(
-                                            'Đã chuyển email vào Thùng Rác'),
-                                      ),
-                                    );
-                                    if (context.mounted) {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => const TrashPage()),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                            'Lỗi khi di chuyển vào Thùng Rác: $e'),
-                                      ),
-                                    );
-                                  }
+                                            'Đã chuyển email vào Thùng Rác')),
+                                  );
                                 },
-                                tooltip: 'Move to Trash',
                               ),
                             ],
                           ),
@@ -534,6 +392,15 @@ class _GmailPageState extends State<GmailPage> {
         backgroundColor: Colors.white,
         child: const Icon(Icons.add, color: Colors.red),
       ),
+    );
+  }
+
+  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      onTap: onTap,
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
     );
   }
 }
