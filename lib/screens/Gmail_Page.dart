@@ -118,6 +118,7 @@ class _GmailPageState extends State<GmailPage> {
           .doc(email.id)
           .update({'isRead': true});
 
+      _loadEmails();
       // then navigate
       await Navigator.push(
         context,
@@ -126,6 +127,7 @@ class _GmailPageState extends State<GmailPage> {
         ),
       );
       // and refresh on return
+      _loadEmails();
       setState(() {});
     } catch (e) {
       if (mounted) {
