@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({Key? key}) : super(key: key);
@@ -10,17 +12,30 @@ class SettingPage extends StatefulWidget {
 class _SettingPageState extends State<SettingPage> {
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    bool isDark = themeNotifier.mode == ThemeMode.dark;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context); // Quay lại trang trước
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Settings'),
       ),
-      body: const Center(child: Text('This is the settings page')),
+      body: ListView(
+        children: [
+          SwitchListTile(
+            title: const Text('Chế độ tối'),
+            value: isDark,
+            onChanged: (val) {
+              themeNotifier.toggle(val);
+            },
+            secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
+          ),
+          // ... các mục settings khác
+        ],
+      ),
     );
   }
 }
