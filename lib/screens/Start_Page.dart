@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:khoates/screens/Account_Page.dart';
-import 'package:khoates/screens/Setting_Page.dart' show SettingPage;
+import 'package:google_fonts/google_fonts.dart'; 
 import 'package:khoates/screens/login_page.dart';
-import 'Home_Page.dart';
-import 'Register_Page.dart' show RegisterPhonePage;
 
 class StartPage extends StatefulWidget {
   const StartPage({Key? key}) : super(key: key);
@@ -12,81 +9,137 @@ class StartPage extends StatefulWidget {
   State<StartPage> createState() => _StartPageState();
 }
 
-class _StartPageState extends State<StartPage> {
-  //int _selectedIndex = 0;
+class _StartPageState extends State<StartPage> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
 
-  // void _onItemTapped(int index) {
-  //   setState(() {
-  //     _selectedIndex = index;
-  //   });
-  // }
+  @override
+  void initState() {
+    super.initState();
 
-  // final List<Widget> _pages = [
-  //   const RegisterPhonePage(),
-  //   const HomePage(),
-  //   const AccountPage(),
-  //   const SettingPage(),
-  // ];
+    _controller = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    _controller.forward(); 
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Leon'), centerTitle: true),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              "Welcome to Our App",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.blueAccent, Colors.purpleAccent],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 20),
+                Text(
+                  "Welcome to Our App",
+                  style: GoogleFonts.poppins(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        blurRadius: 10.0,
+                        color: Colors.black26,
+                        offset: Offset(2.0, 2.0),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  "Pham Bao Long",
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white70,
+                  ),
+                ),
+                Text(
+                  "Cong Minh",
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white70,
+                  ),
+                ),
+                Text(
+                  "Nguyen Bao",
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white70,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Button pressed!")),
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Colors.greenAccent, Colors.blueAccent],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 10,
+                          offset: Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      "Get Started",
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const Text(
-              "Pham Bao Long",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const Text(
-              "Cong Minh",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Hành động khi nhấn nút
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Button pressed!")),
-                );
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
-                );
-              },
-              child: const Text("Get Started"),
-            ),
-          ],
+          ),
         ),
       ),
       // bottomNavigationBar: BottomNavigationBar(
-      //   backgroundColor: Colors.blue,
-      //   selectedItemColor: Colors.green,
-      //   unselectedItemColor: Colors.black,
+      //   backgroundColor: Colors.blue.withOpacity(0.9),
+      //   selectedItemColor: Colors.white,
+      //   unselectedItemColor: Colors.white70,
+      //   type: BottomNavigationBarType.fixed,
       //   items: const [
-      //     BottomNavigationBarItem(
-      //       icon: Icon(Icons.app_registration),
-      //       label: 'Register',
-      //     ),
+      //     BottomNavigationBarItem(icon: Icon(Icons.app_registration), label: 'Register'),
       //     BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
       //     BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
       //     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
