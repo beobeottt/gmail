@@ -1,17 +1,29 @@
-// verify_otp_page.dart
+// lib/screens/verify_otp_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pinput/pinput.dart';
+
+// Nếu bạn muốn điều hướng về HomePage sau khi đăng ký xong:
+import 'Home_Page.dart';
+import 'login_page.dart';
 
 class VerifyOtpPage extends StatefulWidget {
-  final String phoneNumber;
-  final String verificationId;
+  final String name;
+  final String dob;
+  final String email;
+  final String password;
+  final String phone;
+  final int demoOtp;
 
   const VerifyOtpPage({
     Key? key,
-    required this.phoneNumber,
-    required this.verificationId,
+    required this.name,
+    required this.dob,
+    required this.email,
+    required this.password,
+    required this.phone,
+    required this.demoOtp,
   }) : super(key: key);
 
   @override
@@ -19,88 +31,105 @@ class VerifyOtpPage extends StatefulWidget {
 }
 
 class _VerifyOtpPageState extends State<VerifyOtpPage> {
-  final _otpController = TextEditingController();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _isLoading = false;
+  final TextEditingController _otpController = TextEditingController();
+  bool _isVerifying = false;
 
-  Future<void> verifyAndRegister() async {
-    if (_otpController.text.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập đủ 6 số OTP')),
-      );
+  @override
+  void dispose() {
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _verifyOtp() async {
+    final input = _otpController.text.trim();
+    if (input.isEmpty) {
+      _showSnack('Vui lòng nhập mã OTP');
       return;
     }
 
-    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin')),
-      );
+    final enteredOtp = int.tryParse(input);
+    if (enteredOtp == null) {
+      _showSnack('OTP chỉ gồm chữ số');
+      return;
+    }
+
+    if (enteredOtp != widget.demoOtp) {
+      _showSnack('Mã OTP không đúng');
       return;
     }
 
     setState(() {
-      _isLoading = true;
+      _isVerifying = true;
     });
 
     try {
-      // Verify OTP
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: widget.verificationId,
-        smsCode: _otpController.text.trim(),
+      debugPrint('≫ Entered OTP: $enteredOtp, Demo OTP: ${widget.demoOtp}');
+      debugPrint('≫ Creating user with email=${widget.email}');
+
+      // 1) Tạo account bằng email/password
+      UserCredential cred =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: widget.email,
+        password: widget.password,
       );
+      User firebaseUser = cred.user!;
+      debugPrint('≫ Firebase user created, UID=${firebaseUser.uid}');
 
-      // Sign in with phone credential
-      UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithCredential(credential);
+      // 2) Cập nhật displayName
+      await firebaseUser.updateDisplayName(widget.name);
+      debugPrint('≫ Updated displayName to ${widget.name}');
 
-      // Update password
-      await userCredential.user!.updatePassword(
-        _passwordController.text.trim(),
+      // 3) Tạo document profile trong Firestore
+      final uid = firebaseUser.uid;
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'uid': uid,
+        'name': widget.name,
+        'dob': widget.dob,
+        'email': widget.email,
+        'phone': widget.phone,
+        'photoURL': '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('≫ Firestore profile document created for UID=$uid');
+
+      // 4) Điều hướng về HomePage
+      if (!mounted) return;
+      debugPrint('≫ Điều hướng về HomePage');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
       );
-
-      // Save user data to Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
-            'username': _usernameController.text.trim(),
-            'phoneNumber': widget.phoneNumber,
-            'createdAt': Timestamp.now(),
-          });
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Đăng ký thành công!')));
-        Navigator.of(context).popUntil((route) => route.isFirst);
+      debugPrint('≫ Đã gọi pushAndRemoveUntil tới HomePage');
+    } on FirebaseAuthException catch (e) {
+      String message = '';
+      switch (e.code) {
+        case 'email-already-in-use':
+          message = 'Email này đã được sử dụng.';
+          break;
+        case 'invalid-email':
+          message = 'Định dạng email không hợp lệ.';
+          break;
+        case 'weak-password':
+          message = 'Mật khẩu quá yếu.';
+          break;
+        default:
+          message = e.message ?? 'Lỗi đăng ký: ${e.code}';
       }
+      _showSnack(message);
+      debugPrint('≫ FirebaseAuthException: ${e.code} / ${e.message}');
     } catch (e) {
-      String errorMessage = 'Xác minh thất bại: ';
-      if (e is FirebaseAuthException) {
-        switch (e.code) {
-          case 'invalid-verification-code':
-            errorMessage += 'Mã OTP không hợp lệ';
-            break;
-          case 'invalid-verification-id':
-            errorMessage += 'Phiên xác minh đã hết hạn';
-            break;
-          default:
-            errorMessage += e.message ?? 'Lỗi không xác định';
-        }
-      } else {
-        errorMessage += e.toString();
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
-      }
+      _showSnack('Đã có lỗi xảy ra: ${e.toString()}');
+      debugPrint('≫ Exception in _verifyOtp: $e');
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isVerifying = false;
         });
       }
     }
@@ -109,81 +138,55 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Xác minh OTP'), centerTitle: true),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 20),
-              Text(
-                'Nhập mã OTP',
-                style: Theme.of(context).textTheme.headlineSmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Mã OTP đã được gửi đến ${widget.phoneNumber}',
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 30),
-              Pinput(
-                controller: _otpController,
-                length: 6,
-                pinputAutovalidateMode: PinputAutovalidateMode.onSubmit,
-                showCursor: true,
-                onCompleted: (pin) => print(pin),
-              ),
-              const SizedBox(height: 30),
-              TextField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Tên người dùng',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
+      appBar: AppBar(title: const Text('Xác thực OTP'), centerTitle: true),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 20),
+            Text(
+              'Chúng tôi đã gửi mã OTP đến số 0${widget.phone}.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _otpController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: 'Nhập mã OTP',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Mật khẩu',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _isVerifying ? null : _verifyOtp,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                obscureText: true,
               ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: _isLoading ? null : verifyAndRegister,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child:
-                    _isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text(
-                          'Xác minh & Đăng ký',
-                          style: TextStyle(fontSize: 16),
-                        ),
-              ),
-            ],
-          ),
+              child: _isVerifying
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Xác nhận OTP',
+                      style: TextStyle(fontSize: 16),
+                    ),
+            ),
+          ],
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _otpController.dispose();
-    _usernameController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 }

@@ -10,6 +10,17 @@ class SettingPage extends StatefulWidget {
 class _SettingPageState extends State<SettingPage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold();
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context); // Quay lại trang trước
+          },
+        ),
+        title: const Text('Settings'),
+      ),
+      body: const Center(child: Text('This is the settings page')),
+    );
   }
 }

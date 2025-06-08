@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:khoates/screens/Account_Page.dart';
+import 'package:khoates/screens/Setting_Page.dart';
 import 'package:khoates/screens/login_page.dart';
 import 'package:khoates/screens/Register_Page.dart';
 import 'package:khoates/screens/Home_Page.dart';
@@ -16,9 +18,10 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
   final List<Widget> _pages = [
-    const LoginPage(),
-    const RegisterPhonePage(),
+    //const LoginPage(),
     const HomePage(),
+    const AccountPage(),
+    const SettingPage(),
   ];
   void _onItemTapped(int index) {
     setState(() {
@@ -30,10 +33,10 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Leon'), centerTitle: true),
+      appBar: AppBar(title: const Text('Leon'), centerTitle: true),
       body: PageView(
         controller: _pageController,
-        // children: _pages,
+        children: _pages,
         onPageChanged: (index) {
           setState(() {
             _selectedIndex = index;
@@ -42,8 +45,8 @@ class _HomePageState extends State<HomePage> {
       ),
       // 2 button dưới đáy để chuyển các trang
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.blue,
-        selectedItemColor: Colors.green,
+        backgroundColor: Colors.grey,
+        selectedItemColor: Colors.white,
         unselectedItemColor: Colors.black,
 
         // onTap: (index) {
@@ -52,13 +55,13 @@ class _HomePageState extends State<HomePage> {
         //   });
         // },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.app_registration),
-            label: 'Register',
-          ),
+          //BottomNavigationBarItem(icon: Icon(Icons.login), label: 'Login'),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.app_registration),
+          //   label: 'Register',
+          // ),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
