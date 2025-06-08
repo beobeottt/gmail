@@ -1,16 +1,18 @@
 # khoates
 
-A new Flutter project.
+SIMULATED EMAIL SERVICE APPLICATION
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+My app replicates the core functionality of Gmail, designed to provide access to your email account anytime, anywhere. Available on mobile (iOS and Android), web and desktop, ensuring a consistent and responsive experience across all devices. Powered by Firebase for real-time syncing and secure management of your communications, making it the perfect solution for your personal and professional email needs.
+Account:
+    a1b2c3@gmail.com
+    123123
 
-A few resources to get you started if this is your first Flutter project:
+*RUN
+Connect emulator:
+    Android: Open emulator via Android Studio or connect real device (enable developer mode).
+    iOS: Open simulator via Xcode or connect iPhone.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+flutter run -d <device_id>-->flutter build apk # For Android
+                             flutter build ios # For iOS
