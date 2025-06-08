@@ -1,7 +1,6 @@
 # khoates
 
-A new Flutter project.
-
+SIMULATED EMAIL SERVICE APPLICATION.
 ## Getting Started
 
 This project is a starting point for a Flutter application.
